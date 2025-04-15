@@ -1,6 +1,7 @@
 from pydantic import EmailStr
-from sqlmodel import Field, SQLModel
 from sqlalchemy import BigInteger
+from sqlmodel import Field, SQLModel
+
 from src.models import TimestampModel
 
 

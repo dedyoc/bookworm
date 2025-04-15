@@ -5,10 +5,14 @@ from sqlmodel import Session
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
-from src.author.models import (Author, AuthorCreate, AuthorResponse,
-                               AuthorUpdate)
-from src.author.service import (create_author, delete_author, get_author,
-                                get_authors, update_author)
+from src.author.models import Author, AuthorCreate, AuthorResponse, AuthorUpdate
+from src.author.service import (
+    create_author,
+    delete_author,
+    get_author,
+    get_authors,
+    update_author,
+)
 from src.database import get_session
 from src.pagination import PageResponse, PaginationParams
 

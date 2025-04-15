@@ -5,11 +5,19 @@ from sqlmodel import Session
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
-from src.category.models import (Category, CategoryCreate, CategoryResponse,
-                                 CategoryUpdate)
-from src.category.service import (create_category, delete_category,
-                                  get_categories, get_category,
-                                  update_category)
+from src.category.models import (
+    Category,
+    CategoryCreate,
+    CategoryResponse,
+    CategoryUpdate,
+)
+from src.category.service import (
+    create_category,
+    delete_category,
+    get_categories,
+    get_category,
+    update_category,
+)
 from src.database import get_session
 from src.pagination import PageResponse, PaginationParams
 

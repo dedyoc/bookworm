@@ -7,8 +7,12 @@ from sqlmodel import Session
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import Token, User, UserCreate, UserRegister, UserResponse
-from src.auth.service import (authenticate_user, create_access_token,
-                              create_user, get_user_by_email)
+from src.auth.service import (
+    authenticate_user,
+    create_access_token,
+    create_user,
+    get_user_by_email,
+)
 from src.config import settings
 from src.database import get_session
 

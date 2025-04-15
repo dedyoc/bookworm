@@ -6,13 +6,7 @@ from sqlmodel import Session
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
 from src.book.models import Book, BookCreate, BookResponse, BookUpdate
-from src.book.service import (
-    create_book,
-    delete_book,
-    get_book,
-    get_books,
-    update_book,
-)
+from src.book.service import create_book, delete_book, get_book, get_books, update_book
 from src.database import get_session
 from src.pagination import PageResponse, PaginationParams
 

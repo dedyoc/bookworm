@@ -1,11 +1,12 @@
 from decimal import Decimal
 from typing import Optional
-from sqlalchemy import BigInteger, Numeric
-from sqlmodel import Field, SQLModel, Relationship
 
-from src.models import TimestampModel
-from src.category.models import Category
+from sqlalchemy import BigInteger, Numeric
+from sqlmodel import Field, Relationship, SQLModel
+
 from src.author.models import Author
+from src.category.models import Category
+from src.models import TimestampModel
 
 
 class BookBase(SQLModel):
