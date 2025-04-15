@@ -6,6 +6,7 @@ from sqlmodel import SQLModel
 from alembic import context
 from src.auth.models import User
 from src.author.models import Author
+from src.book.models import Book
 from src.category.models import Category
 from src.config import settings
 

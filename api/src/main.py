@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 
 from src.auth.router import router as auth_router
 from src.author.router import router as author_router
+from src.book.router import router as book_router
 from src.category.router import router as category_router
 
 app = FastAPI(
@@ -24,6 +25,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(category_router)
 app.include_router(author_router)
+app.include_router(book_router)
 
 
 @app.exception_handler(Exception)
