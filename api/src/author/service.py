@@ -2,6 +2,7 @@ from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
+import sqlmodel
 
 from src.author.models import Author, AuthorCreate, AuthorUpdate
 from src.pagination import PageResponse, PaginationParams
@@ -34,16 +35,17 @@ def get_authors(session: Session, pagination: PaginationParams) -> PageResponse[
     Returns:
         A paginated response containing authors.
     """
-    statement = select(Author).offset(pagination.skip).limit(pagination.limit)
-    authors = session.exec(statement).all()
-
-    # Count total items for pagination
-    total = session.exec(select(Author)).all()
-    return PageResponse(
+    statement = select(Author).order_by(Author.author_name)
+    results = session.exec(
+        statement.offset(pagination.offset).limit(pagination.page_size)
+    )
+    authors = results.all()
+    count_statement = select(sqlmodel.func.count()).select_from(Author)
+    total = session.exec(count_statement).one()
+    return PageResponse.create(
         items=authors,
-        total=len(total),
-        page=pagination.page,
-        size=pagination.size,
+        total=total,
+        params=pagination,
     )
 
 

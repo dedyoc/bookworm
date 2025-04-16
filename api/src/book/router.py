@@ -6,7 +6,15 @@ from sqlmodel import Session
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
 from src.book.models import Book, BookCreate, BookResponse, BookUpdate
-from src.book.service import create_book, delete_book, get_book, get_books, update_book
+from src.book.service import (
+    SortMode,
+    create_book,
+    delete_book,
+    get_book,
+    get_books,
+    get_top_discounted_books,
+    update_book,
+)
 from src.database import get_session
 from src.pagination import PageResponse, PaginationParams
 
@@ -44,11 +52,28 @@ def create_book_endpoint(
     return create_book(session=session, book_create=book_in)
 
 
+@router.get("/top-discounted", response_model=PageResponse[BookResponse])
+def get_top_discounted_endpoint(
+    session: Session = Depends(get_session),
+) -> Any:
+    """Gets the top discounted books.
+
+    Args:
+        pagination: The pagination parameters dependency.
+        session: The database session dependency.
+
+    Returns:
+        A paginated response containing the top discounted books.
+    """
+    return get_top_discounted_books(session=session)
+
+
 @router.get("/", response_model=PageResponse[BookResponse])
 def read_books(
     pagination: PaginationParams = Depends(),
     category_id: Optional[int] = Query(None, description="Filter by category ID"),
     author_id: Optional[int] = Query(None, description="Filter by author ID"),
+    sort_mode: Optional[SortMode] = None,
     session: Session = Depends(get_session),
 ) -> Any:
     """Gets a paginated list of books with optional filtering.
@@ -67,6 +92,7 @@ def read_books(
         pagination=pagination,
         category_id=category_id,
         author_id=author_id,
+        sort_mode=sort_mode,
     )
 
 

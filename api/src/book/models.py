@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import BigInteger, Numeric
 from sqlmodel import Field, Relationship, SQLModel
@@ -42,6 +42,7 @@ class Book(BookBase, TimestampModel, table=True):
 
     category: Category = Relationship()
     author: Author = Relationship()
+    discounts: List["Discount"] = Relationship(back_populates="book")
 
 
 class BookCreate(BookBase):
