@@ -47,7 +47,7 @@ def create_review(
     return review
 
 
-def get_review(session: Session, review_id: int) -> Review:
+async def get_review(session: Session, review_id: int) -> Review:
     """Gets a review by ID.
 
     Args:
@@ -60,7 +60,7 @@ def get_review(session: Session, review_id: int) -> Review:
     Raises:
         NotFoundError: If the review doesn't exist.
     """
-    review = session.get(Review, review_id)
+    review = await session.get(Review, review_id)
     if not review:
         raise NotFoundError(f"Review with ID {review_id} not found")
     return review
@@ -135,6 +135,7 @@ def update_review(
     for key, value in update_data.items():
         setattr(review, key, value)
     review.review_date = datetime.now()
+    review.updated_at = datetime.now()
 
     session.add(review)
     session.commit()
@@ -142,7 +143,7 @@ def update_review(
     return review
 
 
-def delete_review(
+async def delete_review(
     session: Session, review_id: int, user_id: int, is_admin: bool
 ) -> None:
     """Deletes a review.
@@ -157,7 +158,7 @@ def delete_review(
         NotFoundError: If the review doesn't exist.
         HTTPException: If the user doesn't own the review and is not an admin.
     """
-    review = get_review(session, review_id)
+    review = await get_review(session, review_id)
 
     if review.user_id != user_id and not is_admin:
         raise HTTPException(
@@ -165,5 +166,5 @@ def delete_review(
             detail="You can only delete your own reviews",
         )
 
-    session.delete(review)
-    session.commit()
+    await session.delete(review)
+    await session.commit()

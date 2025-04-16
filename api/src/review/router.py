@@ -113,7 +113,7 @@ def update_review_endpoint(
 
 
 @router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_review_endpoint(
+async def delete_review_endpoint(
     review_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -127,7 +127,7 @@ def delete_review_endpoint(
         session: The database session dependency.
         current_user: The authenticated user dependency.
     """
-    delete_review(
+    await delete_review(
         session=session,
         review_id=review_id,
         user_id=current_user.id,

@@ -10,6 +10,8 @@ from src.book.models import Book
 from src.category.models import Category
 from src.config import settings
 from src.review.models import Review
+from src.discount.models import Discount
+from src.order.models import Order, OrderItem
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

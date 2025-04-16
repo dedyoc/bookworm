@@ -30,7 +30,7 @@ class ReviewBase(SQLModel):
     review_date: datetime = Field(default_factory=datetime.now)
 
 
-class Review(ReviewBase, table=True):
+class Review(ReviewBase, TimestampModel, table=True):
     """Database model for a review.
 
     Attributes:
