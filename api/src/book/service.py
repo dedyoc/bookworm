@@ -5,11 +5,11 @@ from typing import List, Optional
 import sqlmodel
 from sqlmodel import Session, select
 
-from src.review.models import Review
-from src.discount.models import Discount
 from src.book.models import Book, BookCreate, BookUpdate
+from src.discount.models import Discount
 from src.exceptions import NotFoundError
 from src.pagination import PageResponse, PaginationParams
+from src.review.models import Review
 
 # Give me state to choose 4 different sort mode from: on sale, popularity, price low to high, price high to low
 
@@ -166,15 +166,38 @@ def get_top_discounted_books(session: Session, limit: int = 10) -> List[Book]:
     statement = (
         select(Book)
         .join(Discount)
+        .where(
+            Discount.discount_start_date <= datetime.now(),
+            Discount.discount_end_date >= datetime.now(),
+        )
         .order_by((Book.book_price - Discount.discount_price).desc())
         .limit(limit)
     )
     results = session.exec(statement)
     books = results.all()
 
-    count_statement = select(sqlmodel.func.count()).select_from(statement.subquery())
-    total = session.exec(count_statement).one()
+    return books
 
-    return PageResponse.create(
-        items=books, total=total, params=PaginationParams(page_size=limit, page=1)
+
+def get_top_popularity_books(session: Session, limit: int = 10) -> List[Book]:
+    """Gets the top popular books.
+
+    Args:
+        session: The database session.
+        limit: The maximum number of books to retrieve.
+
+    Returns:
+        A list of the top popular books.
+    """
+    # TODO: Fix logic to account for different kinds of discounts
+    statement = (
+        select(Book)
+        .join(Review)
+        .join(Discount)
+        .order_by(sqlmodel.func.count().desc())
+        .limit(limit)
     )
+    results = session.exec(statement)
+    books = results.all()
+
+    return books

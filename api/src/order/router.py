@@ -6,12 +6,7 @@ from sqlmodel import Session
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
 from src.database import get_session
-from src.order.models import (
-    OrderCreate,
-    OrderResponse,
-    OrderStatus,
-    OrderUpdate,
-)
+from src.order.models import OrderCreate, OrderResponse, OrderStatus, OrderUpdate
 from src.order.service import (
     cancel_order,
     create_order,

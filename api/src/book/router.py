@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session
@@ -52,7 +52,7 @@ def create_book_endpoint(
     return create_book(session=session, book_create=book_in)
 
 
-@router.get("/top-discounted", response_model=PageResponse[BookResponse])
+@router.get("/top-discounted", response_model=List[BookResponse])
 def get_top_discounted_endpoint(
     session: Session = Depends(get_session),
 ) -> Any:

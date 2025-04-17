@@ -5,6 +5,7 @@ import sqlmodel
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
+from src.book.models import Book
 from src.book.service import get_book
 from src.exceptions import NotFoundError
 from src.pagination import PageResponse, PaginationParams

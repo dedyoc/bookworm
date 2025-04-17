@@ -1,8 +1,8 @@
 from typing import Optional
 
+import sqlmodel
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
-import sqlmodel
 
 from src.author.models import Author, AuthorCreate, AuthorUpdate
 from src.pagination import PageResponse, PaginationParams
