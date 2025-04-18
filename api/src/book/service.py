@@ -5,7 +5,7 @@ from typing import List, Optional
 import sqlmodel
 from sqlmodel import Session, select
 
-from src.book.models import Book, BookCreate, BookUpdate
+from src.book.models import Book, BookCreate, BookResponse, BookUpdate
 from src.discount.models import Discount
 from src.exceptions import NotFoundError
 from src.pagination import PageResponse, PaginationParams
@@ -26,7 +26,7 @@ class FeaturedBook(Enum):
     POPULAR = "popular"
 
 
-def create_book(session: Session, book_create: BookCreate) -> Book:
+def create_book(session: Session, book_create: BookCreate) -> BookResponse:
     """Creates a new book.
 
     Args:
@@ -43,7 +43,7 @@ def create_book(session: Session, book_create: BookCreate) -> Book:
     return book
 
 
-def get_book(session: Session, book_id: int) -> Book:
+def get_book(session: Session, book_id: int) -> BookResponse:
     """Gets a book by ID.
 
     Args:
@@ -68,7 +68,7 @@ def get_books(
     category_id: Optional[int] = None,
     author_id: Optional[int] = None,
     sort_mode: Optional[SortMode] = None,
-) -> PageResponse[Book]:
+) -> PageResponse[BookResponse]:
     """Gets a paginated list of books with optional filtering.
 
     Args:
@@ -158,7 +158,7 @@ def delete_book(session: Session, book_id: int) -> None:
     session.commit()
 
 
-def get_top_discounted_books(session: Session, limit: int = 10) -> List[Book]:
+def get_top_discounted_books(session: Session, limit: int = 10) -> List[BookResponse]:
     """Gets the top discounted books.
 
     Args:
@@ -169,7 +169,7 @@ def get_top_discounted_books(session: Session, limit: int = 10) -> List[Book]:
         A list of the top discounted books.
     """
     statement = (
-        select(Book)
+        select(Book, Discount.discount_price)
         .join(Discount)
         .where(
             Discount.discount_start_date <= datetime.now(),
@@ -184,7 +184,7 @@ def get_top_discounted_books(session: Session, limit: int = 10) -> List[Book]:
     return books
 
 
-def get_top_popularity_books(session: Session, limit: int = 10) -> List[Book]:
+def get_top_popularity_books(session: Session, limit: int = 10) -> List[BookResponse]:
     """Gets the top popular books.
 
     Args:
@@ -208,23 +208,31 @@ def get_top_popularity_books(session: Session, limit: int = 10) -> List[Book]:
     return books
 
 
-def get_featured_book(session: Session, feature: FeaturedBook) -> List[Review]:
-    """Recommended: get top 8 books with most rating starts – check the average number of
-    rating star and lowest final price
-            Popular: get top 8 books with most reviews - total number review of a book and lowest final
-    price
-    Lowest final price means in the case that there are more than 8 books with most rating starts
-    or most reviews then only get 8 books with lowest final price
+def get_featured_book(
+    session: Session, feature: FeaturedBook, limit: int = 8
+) -> List[BookResponse]:
+    """Gets the featured books based on the specified feature.
+    Args:
+        session: The database session.
+        feature: The feature type (recommended or popular).
     """
     statement = select(Book).join(Review).join(Discount)
     if feature == FeaturedBook.RECOMMENDED:
-        statement = statement.order_by(sqlmodel.func.avg(Review.rating).desc()).limit(8)
+        statement = (
+            statement.group_by(Book.id)
+            .order_by(sqlmodel.func.avg(Review.rating).desc())
+            .limit(limit)
+        )
     elif feature == FeaturedBook.POPULAR:
-        statement = statement.order_by(sqlmodel.func.count(Review.id).desc()).limit(8)
+        statement = (
+            statement.group_by(Book.id)
+            .order_by(sqlmodel.func.count(Review.id).desc())
+            .limit(limit)
+        )
     else:
         raise ValueError("Invalid feature type")
 
     results = session.exec(statement)
-    books = results.all()
 
+    books = results.all()
     return books

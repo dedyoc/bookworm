@@ -7,11 +7,13 @@ from src.auth.dependencies import get_current_user
 from src.auth.models import User
 from src.book.models import Book, BookCreate, BookResponse, BookUpdate
 from src.book.service import (
+    FeaturedBook,
     SortMode,
     create_book,
     delete_book,
     get_book,
     get_books,
+    get_featured_book,
     get_top_discounted_books,
     update_book,
 )
@@ -170,3 +172,19 @@ def delete_book_endpoint(
         )
 
     delete_book(session=session, book_id=book_id)
+
+
+@router.get("/featured/{featured_type}", response_model=List[BookResponse])
+def get_featured_books(
+    featured_type: FeaturedBook,
+    session: Session = Depends(get_session),
+) -> Any:
+    """Gets the featured books.
+
+    Args:
+        session: The database session dependency.
+
+    Returns:
+        A list of featured books.
+    """
+    return get_featured_book(session=session, feature=featured_type)

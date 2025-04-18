@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import BigInteger, Numeric
 from sqlmodel import Field, Relationship, SQLModel
@@ -7,6 +7,9 @@ from sqlmodel import Field, Relationship, SQLModel
 from src.author.models import Author
 from src.category.models import Category
 from src.models import TimestampModel
+
+if TYPE_CHECKING:
+    from src.discount.models import Discount
 
 
 class BookBase(SQLModel):
@@ -73,3 +76,4 @@ class BookResponse(BookBase):
     """
 
     id: int
+    discount_price: Optional[Decimal] = None
