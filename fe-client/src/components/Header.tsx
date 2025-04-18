@@ -1,9 +1,25 @@
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
+import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
+import SignInModal from './SignInModal';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const cartItemCount = 0; // This will be dynamic when we implement cart state
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
+  const { cart } = useCart();
+  const { user, isAuthenticated, login, logout } = useAuth();
+  const cartItemCount = cart.totalItems;
+
+  const handleSignIn = async (email: string, password: string) => {
+    try {
+      await login(email, password);
+      setIsSignInModalOpen(false);
+    } catch (error) {
+      console.error('Login failed:', error);
+      // Error handling is done in the SignInModal component
+    }
+  };
 
   return (
     <header className="bg-white shadow-md">
@@ -48,12 +64,32 @@ const Header = () => {
                 </span>
               )}
             </Link>
-            <button 
-              className="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition-colors"
-              onClick={() => {/* Open sign in modal */}}
-            >
-              Sign In
-            </button>
+            
+            {isAuthenticated ? (
+              <div className="relative group">
+                <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-700">
+                  <span>{user?.name}</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden group-hover:block z-10">
+                  <button
+                    onClick={logout}
+                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button 
+                className="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition-colors"
+                onClick={() => setIsSignInModalOpen(true)}
+              >
+                Sign In
+              </button>
+            )}
           </nav>
 
           {/* Mobile menu button */}
@@ -109,18 +145,35 @@ const Header = () => {
             >
               Cart ({cartItemCount})
             </Link>
-            <button 
-              className="block w-full text-left bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition-colors"
-              onClick={() => {
-                setIsMenuOpen(false);
-                /* Open sign in modal */
-              }}
-            >
-              Sign In
-            </button>
+            
+            {isAuthenticated ? (
+              <button 
+                onClick={logout}
+                className="block w-full text-left py-2 text-gray-700 hover:text-blue-700"
+              >
+                Sign Out ({user?.name})
+              </button>
+            ) : (
+              <button 
+                className="block w-full text-left bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition-colors"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsSignInModalOpen(true);
+                }}
+              >
+                Sign In
+              </button>
+            )}
           </nav>
         )}
       </div>
+
+      {/* Sign In Modal */}
+      <SignInModal 
+        isOpen={isSignInModalOpen}
+        onClose={() => setIsSignInModalOpen(false)}
+        onSignIn={handleSignIn}
+      />
     </header>
   );
 };
