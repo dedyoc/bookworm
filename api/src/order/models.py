@@ -46,6 +46,7 @@ class OrderItem(OrderItemBase, TimestampModel, table=True):
         order: Relationship to the parent order.
     """
 
+    __tablename__ = "order_item"
     id: Optional[int] = Field(sa_type=BigInteger, default=None, primary_key=True)
 
     book: Book = Relationship()

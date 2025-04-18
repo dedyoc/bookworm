@@ -21,6 +21,11 @@ class SortMode(Enum):
     PRICE_HIGH_TO_LOW = "price_high_to_low"
 
 
+class FeaturedBook(Enum):
+    RECOMMENDED = "recommended"
+    POPULAR = "popular"
+
+
 def create_book(session: Session, book_create: BookCreate) -> Book:
     """Creates a new book.
 
@@ -197,6 +202,28 @@ def get_top_popularity_books(session: Session, limit: int = 10) -> List[Book]:
         .order_by(sqlmodel.func.count().desc())
         .limit(limit)
     )
+    results = session.exec(statement)
+    books = results.all()
+
+    return books
+
+
+def get_featured_book(session: Session, feature: FeaturedBook) -> List[Review]:
+    """Recommended: get top 8 books with most rating starts – check the average number of
+    rating star and lowest final price
+            Popular: get top 8 books with most reviews - total number review of a book and lowest final
+    price
+    Lowest final price means in the case that there are more than 8 books with most rating starts
+    or most reviews then only get 8 books with lowest final price
+    """
+    statement = select(Book).join(Review).join(Discount)
+    if feature == FeaturedBook.RECOMMENDED:
+        statement = statement.order_by(sqlmodel.func.avg(Review.rating).desc()).limit(8)
+    elif feature == FeaturedBook.POPULAR:
+        statement = statement.order_by(sqlmodel.func.count(Review.id).desc()).limit(8)
+    else:
+        raise ValueError("Invalid feature type")
+
     results = session.exec(statement)
     books = results.all()
 
