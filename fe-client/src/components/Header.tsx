@@ -25,8 +25,9 @@ const Header = () => {
     <header className="bg-white shadow-md">
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
-          {/* Logo */}
-          <Link to="/" className="text-2xl font-bold text-blue-700">
+          
+          <Link to="/" className="flex text-2xl font-bold text-blue-700">
+          <img src="https://picsum.photos/64" alt="Logo" className="h-8" />
             BOOKWORM
           </Link>
 
@@ -96,6 +97,7 @@ const Header = () => {
           <button 
             className="md:hidden text-gray-700"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
           >
             <svg 
               xmlns="http://www.w3.org/2000/svg" 

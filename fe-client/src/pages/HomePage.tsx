@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import BookCard from '@/components/BookCard';
-import { api } from '@/services/api';
-import { BookType } from '@/lib/types';
+import { bookwormApi } from '@/services/bookwormApi';
+import Autoplay from "embla-carousel-autoplay"
+
 import { 
   Carousel, 
   CarouselContent, 
@@ -13,29 +14,23 @@ import {
 
 export function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
-  const [onSaleBooks, setOnSaleBooks] = useState<BookType[]>([]);
-  const [recommendedBooks, setRecommendedBooks] = useState<BookType[]>([]);
-  const [popularBooks, setPopularBooks] = useState<BookType[]>([]);
+  const [onSaleBooks, setOnSaleBooks] = useState<any[]>([]);
+  const [recommendedBooks, setRecommendedBooks] = useState<any[]>([]);
+  const [popularBooks, setPopularBooks] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'recommended' | 'popular'>('recommended');
 
   useEffect(() => {
+    
     async function fetchBooks() {
       setIsLoading(true);
       try {
-        const onSaleResponse = await api.getBooks({ onSale: true, limit: 10 });
-        const recommendedResponse = await api.getBooks({ 
-          sort: 'rating', 
-          limit: 8,
-          minRating: 4 
-        });
-        const popularResponse = await api.getBooks({ 
-          sort: 'popularity', 
-          limit: 8 
-        });
+        const discountedBooks = await bookwormApi.getTopDiscountedBooks();
+        const recommendedBooksData = await bookwormApi.getFeaturedBooks('recommended');
+        const popularBooksData = await bookwormApi.getFeaturedBooks('popular');
         
-        setOnSaleBooks(onSaleResponse.books);
-        setRecommendedBooks(recommendedResponse.books);
-        setPopularBooks(popularResponse.books);
+        setOnSaleBooks(discountedBooks);
+        setRecommendedBooks(recommendedBooksData);
+        setPopularBooks(popularBooksData);
       } catch (error) {
         console.error('Failed to fetch books:', error);
       } finally {
@@ -46,6 +41,14 @@ export function HomePage() {
     fetchBooks();
   }, []);
 
+  const mapBookToBookCard = (book: any) => ({
+    id: book.id,
+    title: book.book_title,
+    authorName: book.author_name,
+    imageUrl: bookwormApi.getImageUrl(book),
+    originalPrice: book.book_price,
+    discountPrice: book.discount_price,
+  });
   return (
     <div className="space-y-12">
 
@@ -69,17 +72,19 @@ export function HomePage() {
             ))}
           </div>
         ) : (
-          <Carousel className="w-full">
+            <Carousel className="w-full"
+            opts={{ align: "start", loop: true, }}
+              plugins={[
+            Autoplay({
+              delay: 2000,
+            }),
+          ]}>
             <CarouselContent>
               {onSaleBooks.map((book) => (
                 <CarouselItem key={book.id} className="lg:basis-1/4 sm:basis-1/2">
                   <BookCard
                     id={book.id}
-                    title={book.title}
-                    authorName={book.author.name}
-                    imageUrl={book.imageUrl}
-                    originalPrice={book.price}
-                    discountPrice={book.discountPrice}
+                    {...mapBookToBookCard(book)}
                   />
                 </CarouselItem>
               ))}
@@ -88,15 +93,11 @@ export function HomePage() {
             <CarouselNext className="right-2" />
           </Carousel>
         )}
-      </section>
-
-      {/* Featured Books Section */}
-      <section>
+         {/* Featured Books Section */}
         <h2 className="text-2xl font-bold mb-6">Featured Books</h2>
-
-        {/* Tabs */}
-        <div className="border-b border-gray-200 mb-6">
-          <div className="flex space-x-8">
+        {/* Closing tag added here */}
+        <div className="border-gray-200 mb-6">
+          <div className="flex space-x-8 justify-center">
             <button
               className={`pb-2 font-medium text-lg ${
                 activeTab === 'recommended'
@@ -131,12 +132,7 @@ export function HomePage() {
             {(activeTab === 'recommended' ? recommendedBooks : popularBooks).map((book) => (
               <BookCard
                 key={book.id}
-                id={book.id}
-                title={book.title}
-                authorName={book.author.name}
-                imageUrl={book.imageUrl}
-                originalPrice={book.price}
-                discountPrice={book.discountPrice}
+                {...mapBookToBookCard(book)}
               />
             ))}
           </div>

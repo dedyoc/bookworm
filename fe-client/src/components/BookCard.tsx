@@ -27,7 +27,7 @@ const BookCard = ({
     <Link
       to={`/product/${id}`}
       params={{ id }}
-      className="group block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
+      className="group block h-299px bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
     >
       <div className="relative aspect-[2/3] bg-gray-200">
         <img
@@ -51,18 +51,18 @@ const BookCard = ({
 
         </div>
           
-        <div className="mt-3 flex items-center bg-gray-300 p-2 rounded-b-lg">
+        <div className="mt-auto flex items-center bg-gray-300 p-2 rounded-b-lg">
             {discountPrice ? (
               <>
                 <span className="text-gray-400 line-through text-sm mr-2">
-                  ${originalPrice.toFixed(2)}
+                  ${originalPrice}
                 </span>
                 <span className="text-red-600 font-bold">
-                  ${discountPrice.toFixed(2)}
+                  ${discountPrice}
                 </span>
               </>
             ) : (
-              <span className="font-bold">${originalPrice.toFixed(2)}</span>
+              <span className="font-bold">${originalPrice}</span>
             )}
           </div>
       </div>
