@@ -27,7 +27,7 @@ const BookCard = ({
     <Link
       to={`/product/${id}`}
       params={{ id }}
-      className="group block h-299px bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
+      className="group bg-white rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300"
     >
       <div className="relative aspect-[2/3] bg-gray-200">
         <img
@@ -55,14 +55,14 @@ const BookCard = ({
             {discountPrice ? (
               <>
                 <span className="text-gray-400 line-through text-sm mr-2">
-                  ${originalPrice}
+                  ${parseFloat(originalPrice).toFixed(2)}
                 </span>
                 <span className="text-red-600 font-bold">
-                  ${discountPrice}
+                  ${parseFloat(discountPrice).toFixed(2)}
                 </span>
               </>
             ) : (
-              <span className="font-bold">${originalPrice}</span>
+              <span className="font-bold">${parseFloat(originalPrice).toFixed(2)}</span>
             )}
           </div>
       </div>

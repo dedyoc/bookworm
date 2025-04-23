@@ -66,9 +66,9 @@ export function HomePage() {
         </div>
 
         {isLoading ? (
-          <div className="flex gap-4 overflow-x-auto py-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="min-w-[200px] h-72 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="bg-gray-200 h-80 rounded-lg animate-pulse"></div>
             ))}
           </div>
         ) : (

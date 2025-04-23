@@ -21,12 +21,13 @@ export const AboutPage: React.FC = () => {
     return (
         <div className="container mx-auto mt-10 px-4">
             <h1 className="text-3xl font-bold mb-6">About Bookworm</h1>
-            <div className="mb-8">
-                <h2 className="text-xl font-semibold mb-4">Welcome to Bookworm!</h2>
-                <p>
+            <section className="mb-8">
+                <h2 className="text-2xl font-semibold mb-4">Welcome to Bookworm</h2>
+                <p className="text-gray-700">
                     Bookworm is an independent New York bookstore and language school with locations in Manhattan and Brooklyn. We specialize in travel books and language classes.
-                </p>            
-            </div>
-            </div>
+                </p>
+            </section>
+            
+        </div>
     );
     }
