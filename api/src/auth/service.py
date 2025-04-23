@@ -2,14 +2,14 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from jose import jwt
-from passlib.context import CryptContext
+import bcrypt
 from sqlmodel import Session, select
 
 from src.auth.exceptions import InvalidCredentialsError, UserAlreadyExistsError
 from src.auth.models import User, UserCreate
 from src.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# No need for CryptContext, bcrypt will be used directly
 
 ALGORITHM = "HS256"
 
@@ -32,6 +32,24 @@ def create_access_token(data: dict, expires_delta: timedelta) -> str:
     return encoded_jwt
 
 
+def create_refresh_token(data: dict, expires_delta: timedelta) -> str:
+    """Creates a JWT refresh token.
+
+    Args:
+        data: The data to encode in the token (payload).
+        expires_delta: The duration for which the token is valid.
+
+    Returns:
+        The encoded JWT refresh token string.
+    """
+    expire = datetime.now(timezone.utc) + expires_delta
+    to_encode = {"exp": expire, "token_type": "refresh", **data}
+    encoded_jwt = jwt.encode(
+        to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+    )
+    return encoded_jwt
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifies a plain password against a hashed password.
 
@@ -42,7 +60,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if the passwords match, False otherwise.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(
+        plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+    )
 
 
 def get_password_hash(password: str) -> str:
@@ -54,7 +74,7 @@ def get_password_hash(password: str) -> str:
     Returns:
         The hashed password string.
     """
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def create_user(user_create: UserCreate, session: Session) -> User:
