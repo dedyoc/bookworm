@@ -58,7 +58,7 @@ export function HomePage() {
           <h2 className="text-2xl font-bold">On Sale</h2>
           <Link
             to="/shop"
-            search={{ onSale: true }}
+            search={{ sort: 'on-sale', page: 1 , limit: 15 }}
             className="text-blue-700 hover:underline"
           >
             View All
@@ -83,7 +83,6 @@ export function HomePage() {
               {onSaleBooks.map((book) => (
                 <CarouselItem key={book.id} className="lg:basis-1/4 sm:basis-1/2">
                   <BookCard
-                    id={book.id}
                     {...mapBookToBookCard(book)}
                   />
                 </CarouselItem>

@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
-import { useCart } from '../contexts/CartContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import SignInModal from './SignInModal';
 
 const Header = () => {
@@ -28,7 +28,7 @@ const Header = () => {
           
           <Link to="/" className="flex text-2xl font-bold text-blue-700">
           <img src="https://picsum.photos/64" alt="Logo" className="h-8" />
-            BOOKWORM
+          <span className="ml-2">BOOKWORM</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -36,21 +36,22 @@ const Header = () => {
             <Link
               to="/"
               className="text-gray-700 hover:text-blue-700 transition-colors"
-              activeProps={{ className: "text-blue-700 font-semibold" }}
+              activeProps={{ className: "text-blue-700 font-semibold underline" }}
             >
               Home
             </Link>
             <Link
               to="/shop"
+              search={{ sort: 'on-sale', page: 1 , limit: 15 }}
               className="text-gray-700 hover:text-blue-700 transition-colors"
-              activeProps={{ className: "text-blue-700 font-semibold" }}
+              activeProps={{ className: "text-blue-700 font-semibold underline" }}
             >
               Shop
             </Link>
             <Link
               to="/about"
               className="text-gray-700 hover:text-blue-700 transition-colors"
-              activeProps={{ className: "text-blue-700 font-semibold" }}
+              activeProps={{ className: "text-blue-700 font-semibold underline" }}
             >
               About
             </Link>
@@ -59,11 +60,6 @@ const Header = () => {
               className="text-gray-700 hover:text-blue-700 transition-colors relative"
             >
               Cart ({cartItemCount})
-              {cartItemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                  {cartItemCount}
-                </span>
-              )}
             </Link>
             
             {isAuthenticated ? (
@@ -74,7 +70,7 @@ const Header = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden group-hover:block z-10">
+                <div className="absolute right-0 w-48 bg-white rounded-md shadow-lg py-1 hidden group-hover:block z-10">
                   <button
                     onClick={logout}
                     className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
@@ -128,6 +124,7 @@ const Header = () => {
             </Link>
             <Link
               to="/shop"
+              search={{ sort: 'on-sale', page: 1 , limit: 15 }}
               className="block text-gray-700 hover:text-blue-700 transition-colors py-2"
               onClick={() => setIsMenuOpen(false)}
             >

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Separator } from '@/components/ui/separator';
 
 interface SignInModalProps {
   isOpen: boolean;
@@ -14,44 +15,28 @@ const SignInModal = ({ isOpen, onClose, onSignIn }: SignInModalProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
+    // TODO: Add more validation if needed
     if (!email.trim() || !password.trim()) {
       setError('Please enter both email and password');
       return;
     }
-    
-    // Clear any previous errors
-    setError('');
-    
-    // Submit the form
-    onSignIn(email, password);
+        setError('');
+        onSignIn(email, password);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg max-w-md w-full mx-4">
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-xl font-semibold">Sign In</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+      <Separator className="mb-6" />
+
           </button>
         </div>
 
@@ -73,6 +58,7 @@ const SignInModal = ({ isOpen, onClose, onSignIn }: SignInModalProps) => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              placeholder='example@gmail.com'
             />
           </div>
 

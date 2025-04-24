@@ -14,8 +14,8 @@ const Pagination = ({
   onPageChange,
 }: PaginationProps) => {
   // Calculate the range of items being displayed
-  const startItem = (currentPage - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  // const startItem = (currentPage - 1) * itemsPerPage + 1;
+  // const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
   // Generate page numbers to display
   const getPageNumbers = () => {
@@ -58,10 +58,10 @@ const Pagination = ({
   };
 
   return (
-    <div className="flex flex-col md:flex-row justify-between items-center mt-6">
-      <div className="text-sm text-gray-600 mb-4 md:mb-0">
+    <div className="flex flex-col md:flex-row justify-center items-center mt-6">
+      {/* <div className="text-sm text-gray-600 mb-4 md:mb-0">
         Showing {startItem}-{endItem} of {totalItems} items
-      </div>
+      </div> */}
       
       <div className="flex items-center">
         <button
