@@ -8,7 +8,7 @@ import { z } from 'zod'
 const shopSearchSchema = z.object({
   page: z.number().int().min(1).catch(1), 
   limit: z.number().int().min(1).catch(15), // Either 5, 15, 20, or 25
-  sort: z.enum(['popularity', 'price-asc', 'price-desc', 'rating']).catch('popularity'), // Default sort 'popularity'
+  sort: z.enum(['popularity', 'price-asc', 'price-desc', 'on-sale']).catch('popularity'), // Default sort 'popularity'
   onSale: z.boolean().optional(),
   category: z.string().optional(),
   author: z.string().optional(),

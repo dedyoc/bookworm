@@ -3,7 +3,6 @@ import { useSearch, useNavigate } from '@tanstack/react-router';
 import BookCard from '@/components/BookCard';
 import Pagination from '@/components/Pagination';
 import { api } from '@/services/api';
-import RatingStars from '@/components/RatingStars';
 import { 
   Accordion, 
   AccordionContent, 
@@ -11,10 +10,11 @@ import {
   AccordionTrigger 
 } from '@/components/ui/accordion';
 import type { ShopSearch } from '@/routes/shop';
+import { Separator } from '@radix-ui/react-separator';
 
 interface SortOption {
   label: string;
-  value: 'price-asc' | 'price-desc' | 'rating' | 'popularity';
+  value: 'price-asc' | 'price-desc' | 'popularity' | 'on-sale';
 }
 
 interface LimitOption {
@@ -44,10 +44,10 @@ export const ShopPage = () => {
   } = search;
 
   const sortOptions: SortOption[] = [
-    { label: 'Popularity', value: 'popularity' },
     { label: 'Price: Low to High', value: 'price-asc' },
     { label: 'Price: High to Low', value: 'price-desc' },
-    { label: 'Rating', value: 'rating' },
+    { label: 'Popularity', value: 'popularity' },
+    { label: 'On Sale', value: 'on-sale' },
   ];
 
   const limitOptions: LimitOption[] = [
@@ -56,8 +56,10 @@ export const ShopPage = () => {
     { label: '20', value: 20 },
     { label: '25', value: 25 },
   ];
-
+  const startItem = (page - 1) * limit + 1;
+  const endItem = Math.min(page * limit, totalBooks);
   useEffect(() => {
+
     const fetchBooks = async () => {
       setIsLoading(true);
       try {
@@ -175,27 +177,11 @@ export const ShopPage = () => {
       <h1 className="text-3xl font-bold mb-8">
         Books {isFilterActive() && <span className="text-xl font-normal text-gray-600">{getFilterDescription()}</span>}
       </h1>
-      
+      <Separator className="mb-6" />
       <div className="flex flex-col md:flex-row gap-8">
         <aside className="md:w-64 flex-shrink-0">
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <h2 className="text-xl font-semibold mb-4">Filters</h2>
-            
-            <div className="mb-6">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="onSale"
-                  checked={!!onSale}
-                  onChange={(e) => applyFilter('onSale', e.target.checked ? true : undefined)}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="onSale" className="ml-2 text-sm font-medium text-gray-900">
-                  On Sale
-                </label>
-              </div>
-            </div>
-            
+            <h2 className="text-xl font-semibold mb-4">Filter By</h2>        
             <Accordion type="multiple" defaultValue={["categories", "authors", "rating"]} className="space-y-4">
               <AccordionItem value="categories" className="border rounded-md px-3">
                 <AccordionTrigger className="text-base font-medium py-2">Categories</AccordionTrigger>
@@ -209,7 +195,6 @@ export const ShopPage = () => {
                         >
                           {category.name}
                         </button>
-                        <span className="text-xs text-gray-500">{category.count}</span>
                       </div>
                     ))}
                   </div>
@@ -228,7 +213,6 @@ export const ShopPage = () => {
                         >
                           {author.name}
                         </button>
-                        <span className="text-xs text-gray-500">{author.count}</span>
                       </div>
                     ))}
                   </div>
@@ -246,7 +230,6 @@ export const ShopPage = () => {
                         className={`block w-full text-left py-1 ${minRatingFilter === rating ? 'text-blue-700 font-semibold' : 'text-gray-700'}`}
                       >
                         <div className="flex items-center">
-                          <RatingStars rating={rating} size="sm" showText={false} />
                           <span className="ml-2 text-sm">{rating}+ Stars</span>
                         </div>
                       </button>
@@ -271,8 +254,9 @@ export const ShopPage = () => {
         
         <div className="flex-1">
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
+
           <div className="text-sm text-gray-600">
-              Showing {totalBooks} results
+              Showing {startItem}-{endItem} of {totalBooks} items
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-4 mb-4 sm:mb-0">
               <div className="flex items-center">
@@ -312,7 +296,7 @@ export const ShopPage = () => {
           </div>
           
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
               {[...Array(limit)].map((_, index) => (
                 <div key={index} className="bg-gray-200 h-80 rounded-lg animate-pulse"></div>
               ))}
@@ -323,7 +307,7 @@ export const ShopPage = () => {
               <p className="text-gray-500 mt-2">Try adjusting your filters to find more books</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
               {books.map((book) => (
                 <BookCard
                   key={book.id}
