@@ -43,11 +43,13 @@ def upgrade() -> None:
     )
 
     # Migrate data from orderitem to order_item
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO order_item (id, created_at, updated_at, order_id, book_id, quantity, price)
         SELECT id, created_at, updated_at, order_id, book_id, quantity, price
         FROM orderitem
-    """)
+    """
+    )
 
     # Drop the old table
     op.drop_table("orderitem")
@@ -84,11 +86,13 @@ def downgrade() -> None:
     )
 
     # Migrate data back from order_item to orderitem
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO orderitem (id, created_at, updated_at, order_id, book_id, quantity, price)
         SELECT id, created_at, updated_at, order_id, book_id, quantity, price
         FROM order_item
-    """)
+    """
+    )
 
     # Drop the new table
     op.drop_table("order_item")

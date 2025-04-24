@@ -47,6 +47,7 @@ class Token(SQLModel):
     """Response model for JWT access token."""
 
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
 
 
@@ -55,3 +56,7 @@ class TokenPayload(SQLModel):
     """Schema for the data stored within the JWT token."""
 
     sub: str | None = None
+
+
+class RefreshTokenRequest(SQLModel):
+    refresh_token: str
