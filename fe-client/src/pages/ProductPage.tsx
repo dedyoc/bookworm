@@ -139,7 +139,7 @@ export const ProductPage = () => {
       setReviewDetails('');
       setReviewRating(undefined);
       setReviewPage(1); 
-      setReviewSort('newest');
+      setReviewSort('newest'); 
     } catch (error) {
       console.error("Failed to submit review:", error);
       setSubmitReviewError("Failed to submit review. Please try again.");
@@ -165,150 +165,162 @@ export const ProductPage = () => {
   const reviewCount = book.reviewCount ?? totalReviews;
 
   return (
-    <div className="container mx-auto px-4 space-y-8">
-      <h1 className="text-2xl text-gray-600">
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl text-gray-600 mb-4">
         {book.category.name}
       </h1>
-      <Separator />
-      <div className="grid md:grid-cols-2 gap-8 md:gap-12">
-        <div className="space-y-4">
-          <AspectRatio ratio={2/3} className="bg-muted rounded-lg overflow-hidden">
-            {book.imageUrl ? (
-              <img
-                src={book.imageUrl}
-                alt={book.title}
-                className="object-cover w-full h-full"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                No Image Available
-              </div>
-            )}
-          </AspectRatio>
-          <p className="text-center text-gray-700">By {book.author.name}</p>
-        </div>
+      <Separator className="mb-8" />
 
-        <div className="space-y-6">
-          <h1 className="text-3xl md:text-4xl font-bold">{book.title}</h1>
-          <p className="text-gray-700 leading-relaxed">
-            {book.description}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-baseline gap-4">
-            {book.discountPrice && (
-              <span className="text-gray-500 line-through text-xl">${book.price.toFixed(2)}</span>
-            )}
-            <span className="text-3xl font-bold text-red-600">
-              ${(book.discountPrice ?? book.price).toFixed(2)}
-            </span>
+      {/* Grid cols 5 */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-x-12 gap-y-8">
+        
+        {/* Book Info col3 */}
+        <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-lg border bg-card text-card-foreground shadow-sm p-6 space-y-4 h-fit">
+          <div className="space-y-4">
+            <AspectRatio ratio={2 / 3} className="bg-muted rounded-lg overflow-hidden max-w-sm mx-auto md:mx-0">
+              {book.imageUrl ? (
+          <img
+            src={book.imageUrl}
+            alt={book.title}
+            className="object-cover w-full h-full"
+          />
+              ) : (
+          <div className="flex items-center justify-center h-full text-gray-500">
+            No Image Available
           </div>
-          <div className="flex items-center gap-4">
+              )}
+            </AspectRatio>
+            <p className="text-lg text-gray-700">By {book.author.name}</p>
+          </div>
+          <div className="space-y-4">
+            <h1 className="text-3xl md:text-4xl font-bold">{book.title}</h1>
+
+            <p className="text-gray-700 leading-relaxed">
+              {book.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Add to Cart */}
+        <div className="md:col-span-2 rounded-lg border bg-card text-card-foreground shadow-sm space-y-4 h-fit">
+          <div className="flex items-baseline gap-4 p-8 bg-gray-100">
+            {book.discountPrice ? (
+              <>
+                <span className="text-gray-500 line-through text-xl">${book.price.toFixed(2)}</span>
+                <span className="text-3xl font-bold text-red-600">
+                  ${(book.discountPrice).toFixed(2)}
+                </span>
+              </>
+            ) : (
+              <span className="text-3xl font-bold text-gray-600">
+                ${book.price.toFixed(2)}
+              </span>
+            )}
+          </div>
+          <div className="py-15 px-8 space-y-4">
+            <h2 className="text-3xl font-semibold leading-none tracking-tight">
+              Quantity
+            </h2>
             <QuantityInput
-              initialValue={quantity}
-              min={1}
-              max={8}
-              onChange={handleQuantityChange}
-            />
-            </div>
-            <Button size="lg" className="flex-grow sm:flex-grow-0" onClick={handleAddToCart}>
+                initialValue={quantity}
+                min={1}
+                max={8}
+                onChange={handleQuantityChange}
+              />
+            <Button variant="outline" className="w-full my-4 text-2xl p-10" onClick={handleAddToCart}>
               Add to cart
             </Button>
-      <div className="space-y-8">
-        <h2 className="text-2xl font-bold">Customer Reviews</h2>
-        
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-gray-50 p-4 rounded-lg">
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold">{averageRating}</span>
-            {typeof book.rating === 'number' && book.rating > 0 && <StarIcon className="w-6 h-6 text-yellow-500 fill-current" />}
-            <span className="text-gray-600">({reviewCount} Reviews)</span>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <span className="text-sm text-gray-600">
-            {totalReviews > 0 ? `Showing ${startReviewItem}–${endReviewItem} of ${totalReviews} reviews` : 'No reviews yet'}
-          </span>
-          <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
-                  Sort by: {reviewSort.replace('-', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase())}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleReviewSortChange('newest')}>Newest to Oldest</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleReviewSortChange('oldest')}>Oldest to Newest</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleReviewSortChange('rating-high')}>Rating: High to Low</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleReviewSortChange('rating-low')}>Rating: Low to High</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Select value={String(reviewLimit)} onValueChange={handleReviewLimitChange}>
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="Show" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">Show 5</SelectItem>
-                <SelectItem value="10">Show 10</SelectItem>
-                <SelectItem value="20">Show 20</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Customer Reviews cols /3 */}
+        <div className="md:col-span-3 space-y-8 pt-8 md:pt-0 rounded-lg border bg-card text-card-foreground shadow-sm p-6 h-fit">
+          <h2 className="text-2xl font-bold">Customer Reviews</h2>
+          
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-gray-50 p-4 rounded-lg">
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold">{averageRating}</span>
+              {typeof book.rating === 'number' && book.rating > 0 && <StarIcon className="w-6 h-6 text-yellow-500 fill-current" />}
+              <span className="text-gray-600">({reviewCount} Reviews)</span>
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-6 min-h-[200px]">
-          {isReviewLoading ? (
-            <div className="text-center py-10">Loading reviews...</div>
-          ) : reviews.length === 0 ? (
-             <div className="text-center py-10 text-gray-500">Be the first to review this book!</div>
-          ) : (
-            reviews.map((review, index) => (
-              <div key={review.id}>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold">{review.title}</h3>
-                  <span className="text-gray-500">|</span>
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <StarIcon
-                        key={i}
-                        className={`w-4 h-4 ${i < review.rating ? 'text-yellow-500 fill-current' : 'text-gray-300'}`}
-                      />
-                    ))}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <span className="text-sm text-gray-600">
+              {totalReviews > 0 ? `Showing ${startReviewItem}–${endReviewItem} of ${totalReviews} reviews` : 'No reviews yet'}
+            </span>
+            <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
+                    Sort by: {reviewSort.replace('-', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase())}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleReviewSortChange('newest')}>Newest to Oldest</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleReviewSortChange('oldest')}>Oldest to Newest</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleReviewSortChange('rating-high')}>Rating: High to Low</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleReviewSortChange('rating-low')}>Rating: Low to High</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Select value={String(reviewLimit)} onValueChange={handleReviewLimitChange}>
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue placeholder="Show" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">Show 5</SelectItem>
+                  <SelectItem value="10">Show 10</SelectItem>
+                  <SelectItem value="20">Show 20</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-6 min-h-[200px]">
+            {isReviewLoading ? (
+              <div className="text-center py-10">Loading reviews...</div>
+            ) : reviews.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">Be the first to review this book!</div>
+            ) : (
+              reviews.map((review, index) => (
+                <div key={review.id}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold">{review.title}</h3>
+                    <span className="text-gray-500">|</span>
+                    <div className="flex">
+                      {review.rating} stars
+                    </div>
                   </div>
+                  <p className="text-gray-700 mb-2">{review.content}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(review.date).toLocaleDateString()}
+                  </p>
+                  {index < reviews.length - 1 && <Separator className="mt-6" />}
                 </div>
-                <p className="text-gray-700 mb-2">{review.content}</p>
-                <p className="text-xs text-gray-500">
-                  Reviewed by {review.userName} on {new Date(review.date).toLocaleDateString()}
-                </p>
-                {index < reviews.length - 1 && <Separator className="mt-6" />}
-              </div>
-            ))
+              ))
+            )}
+          </div>
+
+          {totalReviewPages > 1 && (
+            <Pagination
+              currentPage={reviewPage}
+              totalPages={totalReviewPages}
+              itemsPerPage={reviewLimit}
+              totalItems={totalReviews}
+              onPageChange={handleReviewPageChange}
+            />
           )}
         </div>
 
-        {totalReviewPages > 1 && (
-          <Pagination
-            currentPage={reviewPage}
-            totalPages={totalReviewPages}
-            itemsPerPage={reviewLimit}
-            totalItems={totalReviews}
-            onPageChange={handleReviewPageChange}
-          />
-        )}
-      </div>
-
-      <Separator className='m-2'/>
-
-      <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-        <div className="flex flex-col space-y-1.5 p-6">
-          <h3 className="text-lg font-semibold leading-none tracking-tight">Write a Review</h3>
-        </div>
-        <div className="p-6 pt-0 space-y-4">
+        {/* Write a Review - Added md:col-span-2 */}
+        <div className="md:col-span-2 rounded-lg border bg-card text-card-foreground shadow-sm p-6 space-y-4 h-fit">
+          <h3 className="text-lg font-semibold leading-none tracking-tight mb-4">Write a Review</h3>
+          
           {submitReviewSuccess && <p className="text-green-600">{submitReviewSuccess}</p>}
           {submitReviewError && <p className="text-red-600">{submitReviewError}</p>}
+          
           <div className="grid gap-2">
-            <label htmlFor="review-title" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Add a title</label>
+            <label htmlFor="review-title" className="text-sm font-medium">Add a title</label>
             <Input 
               id="review-title" 
               placeholder="What's most important to know?" 
@@ -318,17 +330,17 @@ export const ProductPage = () => {
             />
           </div>
           <div className="grid gap-2">
-            <label htmlFor="review-details" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Details please! Your review helps other shoppers.</label>
+            <label htmlFor="review-details" className="text-sm font-medium">Details please!</label>
             <Textarea 
               id="review-details" 
-              placeholder="What did you like or dislike? What did you use this product for?" 
+              placeholder="What did you like or dislike?" 
               value={reviewDetails}
               onChange={(e) => setReviewDetails(e.target.value)}
               disabled={isSubmittingReview}
             />
           </div>
           <div className="grid gap-2">
-            <label htmlFor="review-rating" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Select a rating star</label>
+            <label htmlFor="review-rating" className="text-sm font-medium">Select a rating</label>
             <Select 
               value={reviewRating !== undefined ? String(reviewRating) : ""} 
               onValueChange={(value) => setReviewRating(value ? Number(value) : undefined)}
@@ -350,7 +362,8 @@ export const ProductPage = () => {
             {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
           </Button>
         </div>
-      </div>
+
+      </div> {/* End Grid */}
     </div>
   );
 };

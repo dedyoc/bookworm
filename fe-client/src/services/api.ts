@@ -121,7 +121,7 @@ const books: Book[] = [
   },
   {
     id: "6",
-    title: "The Catcher in the Rye",
+  title: "The Catcher in the Rye And To Eat A Dying Horse And To Eat A Dying Horse",
     author: { id: "6", name: "J.D. Salinger" },
     imageUrl: "https://picsum.photos/id/6/200/300",
     description:
@@ -327,7 +327,7 @@ export const api = {
       category?: string;
       author?: string;
       minRating?: number;
-      sort?: "price-asc" | "price-desc" | "rating" | "popularity";
+      sort?: "price-asc" | "price-desc" | "on-sale" | "popularity";
       onSale?: boolean;
     } = {}
   ) => {
@@ -381,8 +381,12 @@ export const api = {
               (b.discountPrice || b.price) - (a.discountPrice || a.price)
           );
           break;
-        case "rating":
-          filteredBooks.sort((a, b) => b.rating - a.rating);
+        case "on-sale":
+          filteredBooks.sort((a, b) => {
+            const aOnSale = a.discountPrice !== undefined ? 1 : 0;
+            const bOnSale = b.discountPrice !== undefined ? 1 : 0;
+            return bOnSale - aOnSale;
+          });
           break;
         case "popularity":
           filteredBooks.sort((a, b) => b.reviewCount - a.reviewCount);

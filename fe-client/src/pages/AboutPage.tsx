@@ -6,7 +6,7 @@ export const AboutPage: React.FC = () => {
         <>
             <h1 className="text-2xl font-bold">About Us</h1>
             <Separator className="my-4" />
-            <div className="space-y-12 mx-50">
+            <div className="space-y-12 md:mx-50">
                 <h1 className="text-3xl font-bold text-center">Welcome to Bookworm</h1>
                 <p className="text-lg">
                     "Bookworm is an independent New York bookstore and language school with locations in Manhattan and Brooklyn. We specialize in travel books and language classes."

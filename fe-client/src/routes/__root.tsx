@@ -6,13 +6,13 @@ import { AuthProvider } from '@/contexts/AuthContext'
 
 export const Route = createRootRoute({
   component: () => (
-    <AuthProvider>
-      <CartProvider>
+    <CartProvider>
+      <AuthProvider>
         <RootLayout>
           <Outlet />
           <TanStackRouterDevtools />
         </RootLayout>
-      </CartProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </CartProvider>
   ),
 })
