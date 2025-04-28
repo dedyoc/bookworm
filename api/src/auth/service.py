@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import uuid4
 
 from jose import jwt
 import bcrypt
 from sqlmodel import Session, select
 
+from src.auth.models import BlacklistedToken
 from src.auth.exceptions import InvalidCredentialsError, UserAlreadyExistsError
 from src.auth.models import User, UserCreate
 from src.config import settings
@@ -25,7 +27,7 @@ def create_access_token(data: dict, expires_delta: timedelta) -> str:
         The encoded JWT access token string.
     """
     expire = datetime.now(timezone.utc) + expires_delta
-    to_encode = {"exp": expire, **data}
+    to_encode = {"exp": expire, "jti": str(uuid4()), **data}
     encoded_jwt = jwt.encode(
         to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
@@ -43,11 +45,82 @@ def create_refresh_token(data: dict, expires_delta: timedelta) -> str:
         The encoded JWT refresh token string.
     """
     expire = datetime.now(timezone.utc) + expires_delta
-    to_encode = {"exp": expire, "token_type": "refresh", **data}
+    to_encode = {"exp": expire, "token_type": "refresh", "jti": str(uuid4()), **data}
     encoded_jwt = jwt.encode(
         to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
     return encoded_jwt
+
+
+def blacklist_token(session: Session, token: str) -> None:
+    """Blacklists a token so it can no longer be used for authentication.
+
+    Args:
+        session: The database session.
+        token: The token to blacklist.
+    """
+    try:
+        payload = jwt.decode(
+            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+        )
+        expiry = datetime.fromtimestamp(payload.get("exp"), tz=timezone.utc)
+
+        # Check if already blacklisted
+        existing = session.exec(
+            select(BlacklistedToken).where(BlacklistedToken.token == token)
+        ).first()
+
+        if existing:
+            return  # Already blacklisted
+
+        token_entry = BlacklistedToken(
+            token=token, expiry=expiry, blacklisted_on=datetime.now(timezone.utc)
+        )
+        session.add(token_entry)
+        session.commit()
+    except Exception:
+        pass
+
+
+def is_token_blacklisted(session: Session, token: str) -> bool:
+    """Checks if a token is blacklisted.
+
+    Args:
+        session: The database session.
+        token: The token to check.
+
+    Returns:
+        True if the token is blacklisted, False otherwise.
+    """
+    blacklisted = session.exec(
+        select(BlacklistedToken).where(BlacklistedToken.token == token)
+    ).first()
+    return blacklisted is not None
+
+
+def purge_expired_blacklisted_tokens(session: Session) -> int:
+    """Removes expired tokens from the blacklist to keep the database clean.
+
+    Args:
+        session: The database session.
+
+    Returns:
+        The number of tokens removed.
+    """
+    now = datetime.now(timezone.utc)
+    expired_tokens = session.exec(
+        select(BlacklistedToken).where(BlacklistedToken.expiry < now)
+    ).all()
+
+    count = 0
+    for token in expired_tokens:
+        session.delete(token)
+        count += 1
+
+    if count > 0:
+        session.commit()
+
+    return count
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

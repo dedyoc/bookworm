@@ -1,3 +1,5 @@
+from datetime import datetime
+from typing import Optional
 from pydantic import EmailStr
 from sqlalchemy import BigInteger
 from sqlmodel import Field, SQLModel
@@ -60,3 +62,22 @@ class TokenPayload(SQLModel):
 
 class RefreshTokenRequest(SQLModel):
     refresh_token: str
+
+
+class BlacklistedToken(TimestampModel, table=True):
+    """Model for blacklisted tokens.
+
+    When a user logs out, their token is added to this blacklist and
+    will be rejected even if it's not expired yet.
+
+    Attributes:
+        id: The primary key.
+        token_jti: The JWT token ID (jti claim).
+        expiry: The time when the token expires.
+        blacklisted_on: The time when the token was blacklisted.
+    """
+
+    id: Optional[int] = Field(sa_type=BigInteger, default=None, primary_key=True)
+    token: str = Field(index=True)
+    expiry: datetime
+    blacklisted_on: datetime = Field(default_factory=datetime.now)

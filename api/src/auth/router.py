@@ -1,13 +1,13 @@
 from datetime import timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 from sqlmodel import Session
 
 from src.auth.exceptions import InvalidCredentialsError
-from src.auth.dependencies import get_current_user
+from src.auth.dependencies import get_current_user, oauth2_scheme
 from src.auth.models import (
     RefreshTokenRequest,
     Token,
@@ -19,6 +19,7 @@ from src.auth.models import (
 )
 from src.auth.service import (
     authenticate_user,
+    blacklist_token,
     create_access_token,
     create_refresh_token,
     create_user,
@@ -90,6 +91,29 @@ def login_for_access_token(
         "refresh_token": refresh_token,
         "token_type": "bearer",
     }
+
+
+@router.post("/logout", status_code=200)
+def logout(
+    session: Session = Depends(get_session),
+    token: str = Depends(oauth2_scheme),
+    refresh_token: str = Header(None),
+):
+    """Logs out the current user by blacklisting their active tokens.
+
+    Args:
+        session: The database session dependency.
+        token: The current access token to blacklist.
+        refresh_token: Optional refresh token to also blacklist.
+
+    Returns:
+        A success message.
+    """
+    blacklist_token(session, token)
+    if refresh_token:
+        blacklist_token(session, refresh_token)
+
+    return {"message": "Successfully logged out"}
 
 
 @router.post("/refresh", response_model=Token)

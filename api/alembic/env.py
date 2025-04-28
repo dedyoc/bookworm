@@ -4,14 +4,14 @@ from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
 from alembic import context
-from src.auth.models import User
-from src.author.models import Author
-from src.book.models import Book
-from src.category.models import Category
+from src.auth.models import User, BlacklistedToken  # noqa: F401
+from src.author.models import Author  # noqa: F401
+from src.book.models import Book  # noqa: F401
+from src.category.models import Category  # noqa: F401
 from src.config import settings
-from src.discount.models import Discount
-from src.order.models import Order, OrderItem
-from src.review.models import Review
+from src.discount.models import Discount  # noqa: F401
+from src.order.models import Order, OrderItem  # noqa: F401
+from src.review.models import Review  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
