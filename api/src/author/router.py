@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
@@ -9,6 +9,7 @@ from src.author.models import Author, AuthorCreate, AuthorResponse, AuthorUpdate
 from src.author.service import (
     create_author,
     delete_author,
+    get_all_authors,
     get_author,
     get_authors,
     update_author,
@@ -48,6 +49,19 @@ def create_author_endpoint(
         )
 
     return create_author(session=session, author_create=author_in)
+
+
+@router.get("/all", response_model=List[AuthorResponse])
+def read_all_authors(session: Session = Depends(get_session)) -> Any:
+    """Gets all authors.
+
+    Args:
+        session: The database session dependency.
+
+    Returns:
+        A list of all authors.
+    """
+    return get_all_authors(session=session)
 
 
 @router.get("/", response_model=PageResponse[AuthorResponse])

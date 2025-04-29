@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 import sqlmodel
 from fastapi import HTTPException, status
@@ -23,6 +23,20 @@ def create_author(session: Session, author_create: AuthorCreate) -> Author:
     session.commit()
     session.refresh(author)
     return author
+
+
+def get_all_authors(session: Session) -> List[Author]:
+    """Gets all authors.
+
+    Args:
+        session: The database session.
+
+    Returns:
+        A list of all authors.
+    """
+    statement = select(Author).order_by(Author.author_name)
+    results = session.exec(statement)
+    return results.all()
 
 
 def get_authors(session: Session, pagination: PaginationParams) -> PageResponse[Author]:
