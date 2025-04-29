@@ -44,6 +44,20 @@ def get_category(session: Session, category_id: int) -> Category:
     return category
 
 
+def get_all_categories(session: Session) -> List[Category]:
+    """Gets all categories.
+
+    Args:
+        session: The database session.
+
+    Returns:
+        A list of all categories.
+    """
+    statement = select(Category).order_by(Category.category_name)
+    results = session.exec(statement)
+    return results.all()
+
+
 def get_categories(
     session: Session, pagination: PaginationParams
 ) -> PageResponse[Category]:

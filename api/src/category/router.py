@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
@@ -14,6 +14,7 @@ from src.category.models import (
 from src.category.service import (
     create_category,
     delete_category,
+    get_all_categories,
     get_categories,
     get_category,
     update_category,
@@ -53,6 +54,19 @@ def create_category_endpoint(
         )
 
     return create_category(session=session, category_create=category_in)
+
+
+@router.get("/all", response_model=List[CategoryResponse])
+def read_all_categories(session: Session = Depends(get_session)) -> Any:
+    """Gets all categories.
+
+    Args:
+        session: The database session dependency.
+
+    Returns:
+        A list of all categories.
+    """
+    return get_all_categories(session=session)
 
 
 @router.get("/", response_model=PageResponse[CategoryResponse])
