@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useCart } from './CartContext';
+import { bookwormApi } from '@/services/bookwormApi'; // Import the API service
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -113,12 +114,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => { 
+    const token = localStorage.getItem('auth-token');
+    if (token) {
+      try {
+        await bookwormApi.logout(token);
+        console.log('Successfully logged out on backend.');
+      } catch (error) {
+        console.error('Backend logout failed:', error);
+      }
+    }
     localStorage.removeItem('auth-token');
     localStorage.removeItem('auth-user');
+    localStorage.removeItem('auth-refresh-token');
     setUser(null);
-    clearCart(); // Clear cart
+    clearCart();
   };
+
+  // TODO: Implement token refresh logic if needed
+  // const refreshToken = async () => { ... }
 
   const value = {
     user,
@@ -126,6 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isLoading,
     login,
     logout,
+    // refreshToken, // Add if implemented
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

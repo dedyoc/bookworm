@@ -1,6 +1,6 @@
 import { AspectRatio } from '@radix-ui/react-aspect-ratio';
 import { Link } from '@tanstack/react-router';
-
+import defaultImage from '@/assets/default-cover.jpg';
 interface BookCardProps {
   id: string | number;
   imageUrl?: string;
@@ -20,7 +20,6 @@ const BookCard = ({
   originalPrice,
   discountPrice,
 }: BookCardProps) => {
-  const placeholderImage = 'https://picsum.photos/200/300';
   return (
     <Link
       to={`/product/${id}`}
@@ -29,9 +28,12 @@ const BookCard = ({
     >
       <AspectRatio ratio={2 / 3} className="w-full">
         <img
-          src={imageUrl || placeholderImage}
+          src={imageUrl || defaultImage}
           alt={title}
           className="w-full h-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = defaultImage;
+          }}
         />
       </AspectRatio>
       <div className="flex flex-col flex-grow">

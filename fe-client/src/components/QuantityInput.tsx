@@ -48,34 +48,34 @@ const QuantityInput = ({
   return (
     <div className="flex items-center w-full">
       <button
-      onClick={handleDecrease}
-      disabled={quantity <= min}
-      className={`flex-1 h-12 flex text-accent-foreground text-3xl items-center justify-center rounded-l border border-gray-300 ${
-        quantity <= min ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-      }`}
-      type="button"
+        onClick={handleDecrease}
+        disabled={quantity <= min}
+        className={`w-12 h-12 flex text-accent-foreground text-3xl items-center justify-center rounded-l border border-gray-300 ${
+          quantity <= min ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        }`}
+        type="button"
       >
-      -
+        -
       </button>
       
       <input
-      type="number"
-      min={min}
-      max={max}
-      value={quantity}
-      onChange={handleInputChange}
-      className="h-12 flex-1 border-t border-b border-gray-300 text-center [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none"
+        type="number"
+        min={min}
+        max={max}
+        value={quantity}
+        onChange={handleInputChange}
+        className="h-12 flex-grow border-t border-b border-gray-300 text-center [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
       />
       
       <button
-      onClick={handleIncrease}
-      disabled={quantity >= max}
-      className={`flex-1 h-12 flex text-accent-foreground text-3xl items-center justify-center rounded-r border border-gray-300 ${
-        quantity >= max ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-      }`}
-      type="button"
+        onClick={handleIncrease}
+        disabled={quantity >= max}
+        className={`w-12 h-12 flex text-accent-foreground text-3xl items-center justify-center rounded-r border border-gray-300 ${
+          quantity >= max ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        }`}
+        type="button"
       >
-      +
+        +
       </button>
     </div>
   );
