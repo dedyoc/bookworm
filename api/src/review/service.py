@@ -5,12 +5,10 @@ import sqlmodel
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
-from src.book.models import Book
-from src.book.service import get_book
+
 from src.exceptions import NotFoundError
 from src.pagination import PageResponse, PaginationParams
-from src.review.exceptions import DuplicateReviewError
-from src.review.models import Review, ReviewCreate, ReviewUpdate
+from src.review.models import RatingStar, Review, ReviewCreate, ReviewUpdate
 
 
 def create_review(
@@ -72,6 +70,8 @@ def get_reviews(
     pagination: PaginationParams,
     book_id: Optional[int] = None,
     user_id: Optional[int] = None,
+    rating_star: Optional[RatingStar] = None,
+    asc: Optional[bool] = False,
 ) -> PageResponse[Review]:
     """Gets a paginated list of reviews with optional filtering.
 
@@ -86,14 +86,17 @@ def get_reviews(
     """
     statement = select(Review)
 
-    # Apply filters if provided
     if book_id is not None:
         statement = statement.where(Review.book_id == book_id)
     if user_id is not None:
         statement = statement.where(Review.user_id == user_id)
-    statement = statement.order_by(Review.review_date.desc())
+    if rating_star is not None:
+        statement = statement.where(Review.rating == rating_star)
+    if asc:
+        statement = statement.order_by(Review.review_date.asc())
+    else:
+        statement = statement.order_by(Review.review_date.desc())
 
-    # Execute with pagination
     results = session.exec(
         statement.offset(pagination.offset).limit(pagination.page_size)
     )

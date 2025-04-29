@@ -7,7 +7,7 @@ from src.auth.dependencies import get_current_user
 from src.auth.models import User
 from src.database import get_session
 from src.pagination import PageResponse, PaginationParams
-from src.review.models import ReviewCreate, ReviewResponse, ReviewUpdate
+from src.review.models import RatingStar, ReviewCreate, ReviewResponse, ReviewUpdate
 from src.review.service import (
     create_review,
     delete_review,
@@ -46,6 +46,12 @@ def read_reviews(
     pagination: PaginationParams = Depends(),
     book_id: Optional[int] = Query(None, description="Filter by book ID"),
     user_id: Optional[int] = Query(None, description="Filter by user ID"),
+    asc: Optional[bool] = Query(
+        default=None, description="Sort reviews by rating in ascending order"
+    ),
+    rating_star: Optional[RatingStar] = Query(
+        None, description="Filter by rating (1-5)"
+    ),
     session: Session = Depends(get_session),
 ) -> Any:
     """Gets a paginated list of reviews with optional filtering.
@@ -62,6 +68,8 @@ def read_reviews(
     return get_reviews(
         session=session,
         pagination=pagination,
+        rating_star=rating_star,
+        asc=asc,
         book_id=book_id,
         user_id=user_id,
     )

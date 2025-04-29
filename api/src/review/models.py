@@ -1,13 +1,32 @@
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
-from pydantic import Field, conint
+from pydantic import Field
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Relationship, SQLModel
 
 from src.auth.models import User
 from src.book.models import Book
 from src.models import TimestampModel
+
+
+class RatingStar(Enum):
+    """Enum for rating stars.
+
+    Attributes:
+        ONE: 1 star rating.
+        TWO: 2 star rating.
+        THREE: 3 star rating.
+        FOUR: 4 star rating.
+        FIVE: 5 star rating.
+    """
+
+    ONE = 1
+    TWO = 2
+    THREE = 3
+    FOUR = 4
+    FIVE = 5
 
 
 class ReviewBase(SQLModel):

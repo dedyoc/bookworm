@@ -297,6 +297,7 @@ def get_active_discount_for_book(session: Session, book_id: int) -> Optional[Dis
                 | (Discount.discount_end_date >= today)
             )
         )
+        .order_by(Discount.discount_price.desc() if Discount.discount_price else None)
     )
 
     return session.exec(statement).first()
