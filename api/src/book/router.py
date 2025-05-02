@@ -5,15 +5,15 @@ from sqlmodel import Session
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
-from src.book.models import Book, BookCreate, BookResponse, BookUpdate
+from src.book.models import BookCreate, BookResponse, BookUpdate
 from src.book.service import (
-    FeaturedBook,
     SortMode,
     create_book,
     delete_book,
     get_book,
     get_books,
-    get_featured_book,
+    get_popular_book,
+    get_recommended_book,
     get_top_discounted_books,
     update_book,
 )
@@ -54,6 +54,37 @@ def create_book_endpoint(
     return create_book(session=session, book_create=book_in)
 
 
+@router.get("/recommended", response_model=List[BookResponse])
+def get_recommended_endpoint(
+    session: Session = Depends(get_session),
+) -> Any:
+    """Gets the recommended books for the current user.
+
+    Args:
+        session: The database session dependency.
+        current_user: The authenticated user dependency.
+
+    Returns:
+        A list of recommended books.
+    """
+    return get_recommended_book(session=session)
+
+
+@router.get("/popular", response_model=List[BookResponse])
+def get_popular_endpoint(
+    session: Session = Depends(get_session),
+) -> Any:
+    """Gets the popular books.
+
+    Args:
+        session: The database session dependency.
+
+    Returns:
+        A list of popular books.
+    """
+    return get_popular_book(session=session)
+
+
 @router.get("/top-discounted", response_model=List[BookResponse])
 def get_top_discounted_endpoint(
     session: Session = Depends(get_session),
@@ -75,6 +106,9 @@ def read_books(
     pagination: PaginationParams = Depends(),
     category_id: Optional[int] = Query(None, description="Filter by category ID"),
     author_id: Optional[int] = Query(None, description="Filter by author ID"),
+    min_rating: Optional[int] = Query(
+        None, ge=1, le=5, description="Filter by min rating (1 to 5)"
+    ),
     sort_mode: Optional[SortMode] = None,
     session: Session = Depends(get_session),
 ) -> Any:
@@ -84,6 +118,8 @@ def read_books(
         pagination: The pagination parameters dependency.
         category_id: Optional filter by category ID.
         author_id: Optional filter by author ID.
+        rating: Optional filter by rating (1 to 5).
+        sort_mode: Optional sorting mode for books.
         session: The database session dependency.
 
     Returns:
@@ -94,6 +130,7 @@ def read_books(
         pagination=pagination,
         category_id=category_id,
         author_id=author_id,
+        rating=min_rating,
         sort_mode=sort_mode,
     )
 
@@ -174,17 +211,18 @@ def delete_book_endpoint(
     delete_book(session=session, book_id=book_id)
 
 
-@router.get("/featured/{featured_type}", response_model=List[BookResponse])
-def get_featured_books(
-    featured_type: FeaturedBook,
-    session: Session = Depends(get_session),
-) -> Any:
-    """Gets the featured books.
+# Use different
+# @router.get("/featured/{featured_type}", response_model=List[BookResponse])
+# def get_featured_books(
+#     featured_type: FeaturedBook,
+#     session: Session = Depends(get_session),
+# ) -> Any:
+#     """Gets the featured books.
 
-    Args:
-        session: The database session dependency.
+#     Args:
+#         session: The database session dependency.
 
-    Returns:
-        A list of featured books.
-    """
-    return get_featured_book(session=session, feature=featured_type)
+#     Returns:
+#         A list of featured books.
+#     """
+#     return get_featured_book(session=session, feature=featured_type)

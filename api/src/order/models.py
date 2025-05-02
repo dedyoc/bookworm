@@ -2,7 +2,6 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import List, Optional
-
 from sqlalchemy import BigInteger, Numeric
 from sqlmodel import Field, Relationship, SQLModel
 

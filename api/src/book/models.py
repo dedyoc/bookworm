@@ -69,11 +69,8 @@ class BookUpdate(SQLModel):
 
 
 class BookResponse(BookBase):
-    """Response model for book information.
-
-    Attributes:
-        id: The ID of the book.
-    """
+    """Response model for book information."""
 
     id: int
     discount_price: Optional[Decimal] = None
+    author_name: Optional[str] = None
