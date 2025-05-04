@@ -10,16 +10,6 @@ from src.book.models import Book
 from src.models import TimestampModel
 
 
-class OrderStatus(str, Enum):
-    """Enum for order status values."""
-
-    PENDING = "pending"
-    PROCESSING = "processing"
-    SHIPPED = "shipped"
-    DELIVERED = "delivered"
-    CANCELLED = "cancelled"
-
-
 class OrderItemBase(SQLModel):
     """Base order item model with common fields.
 
@@ -65,7 +55,6 @@ class OrderBase(SQLModel):
     user_id: int = Field(sa_type=BigInteger, foreign_key="user.id")
     order_date: datetime = Field(default_factory=datetime.now)
     order_amount: Decimal = Field(sa_type=Numeric(10, 2), ge=0)
-    status: OrderStatus = Field(default=OrderStatus.PENDING)
 
 
 class Order(OrderBase, TimestampModel, table=True):
@@ -125,15 +114,3 @@ class OrderResponse(OrderBase):
 
     id: int
     items: List[OrderItemResponse]
-
-
-class OrderUpdate(SQLModel):
-    """Model for updating an existing order.
-
-    All fields are optional to allow partial updates.
-
-    Attributes:
-        status: The new status of the order.
-    """
-
-    status: Optional[OrderStatus] = None

@@ -18,8 +18,6 @@ from src.order.models import (
     OrderCreate,
     OrderItem,
     OrderItemCreate,
-    OrderStatus,
-    OrderUpdate,
 )
 from src.pagination import PageResponse, PaginationParams
 
@@ -60,7 +58,6 @@ def create_order(session: Session, order_create: OrderCreate, user_id: int) -> O
             book_id=book.id,
             quantity=item_create.quantity,
             price=price,
-            # order_id will be set after creating the order
         )
         order_items.append(order_item)
 
@@ -69,7 +66,6 @@ def create_order(session: Session, order_create: OrderCreate, user_id: int) -> O
         user_id=user_id,
         order_date=datetime.now(),
         order_amount=total_amount,
-        status=OrderStatus.PENDING,
     )
 
     session.add(order)
@@ -116,7 +112,6 @@ def get_orders(
     session: Session,
     pagination: PaginationParams,
     user_id: Optional[int] = None,
-    status: Optional[OrderStatus] = None,
     is_admin: bool = False,
 ) -> PageResponse[Order]:
     """Gets a paginated list of orders with optional filtering.
@@ -136,9 +131,6 @@ def get_orders(
     # Apply filters
     if user_id is not None:
         statement = statement.where(Order.user_id == user_id)
-
-    if status is not None:
-        statement = statement.where(Order.status == status)
 
     # Non-admin users can only see their own orders
     if not is_admin and user_id is not None:
@@ -160,72 +152,72 @@ def get_orders(
     return PageResponse.create(items=orders, total=total, params=pagination)
 
 
-def update_order(
-    session: Session,
-    order_id: int,
-    order_update: OrderUpdate,
-    user_id: int,
-    is_admin: bool,
-) -> Order:
-    """Updates an order.
+# def update_order(
+#     session: Session,
+#     order_id: int,
+#     order_update: OrderUpdate,
+#     user_id: int,
+#     is_admin: bool,
+# ) -> Order:
+#     """Updates an order.
 
-    Args:
-        session: The database session.
-        order_id: The ID of the order to update.
-        order_update: The order data to update.
-        user_id: The ID of the user making the update.
-        is_admin: Whether the user is an admin.
+#     Args:
+#         session: The database session.
+#         order_id: The ID of the order to update.
+#         order_update: The order data to update.
+#         user_id: The ID of the user making the update.
+#         is_admin: Whether the user is an admin.
 
-    Returns:
-        The updated order.
+#     Returns:
+#         The updated order.
 
-    Raises:
-        NotFoundError: If the order doesn't exist.
-        OrderAccessDeniedError: If the user doesn't own the order and is not an admin.
-        InvalidOrderDataError: If the order data is invalid.
-    """
-    order = get_order(session, order_id, user_id, is_admin)
+#     Raises:
+#         NotFoundError: If the order doesn't exist.
+#         OrderAccessDeniedError: If the user doesn't own the order and is not an admin.
+#         InvalidOrderDataError: If the order data is invalid.
+#     """
+#     order = get_order(session, order_id, user_id, is_admin)
 
-    if not is_admin:
-        raise OrderAccessDeniedError("Only administrators can update orders")
+#     if not is_admin:
+#         raise OrderAccessDeniedError("Only administrators can update orders")
 
-    update_data = order_update.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(order, key, value)
-    order.updated_at = datetime.now()
-    session.add(order)
-    session.commit()
-    session.refresh(order)
-    return order
+#     update_data = order_update.model_dump(exclude_unset=True)
+#     for key, value in update_data.items():
+#         setattr(order, key, value)
+#     order.updated_at = datetime.now()
+#     session.add(order)
+#     session.commit()
+#     session.refresh(order)
+#     return order
 
 
-def cancel_order(
-    session: Session, order_id: int, user_id: int, is_admin: bool
-) -> Order:
-    """Cancels an order.
+# def cancel_order(
+#     session: Session, order_id: int, user_id: int, is_admin: bool
+# ) -> Order:
+#     """Cancels an order.
 
-    Args:
-        session: The database session.
-        order_id: The ID of the order to cancel.
-        user_id: The ID of the user making the request.
-        is_admin: Whether the user is an admin.
+#     Args:
+#         session: The database session.
+#         order_id: The ID of the order to cancel.
+#         user_id: The ID of the user making the request.
+#         is_admin: Whether the user is an admin.
 
-    Returns:
-        The cancelled order.
+#     Returns:
+#         The cancelled order.
 
-    Raises:
-        NotFoundError: If the order doesn't exist.
-        OrderAccessDeniedError: If the user doesn't own the order and is not an admin.
-        InvalidOrderDataError: If the order cannot be cancelled.
-    """
-    order = get_order(session, order_id, user_id, is_admin)
+#     Raises:
+#         NotFoundError: If the order doesn't exist.
+#         OrderAccessDeniedError: If the user doesn't own the order and is not an admin.
+#         InvalidOrderDataError: If the order cannot be cancelled.
+#     """
+#     order = get_order(session, order_id, user_id, is_admin)
 
-    # Check if the order can be cancelled
-    if order.status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
-        raise InvalidOrderDataError(f"Cannot cancel order with status {order.status}")
+#     # Check if the order can be cancelled
+#     if order.status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
+#         raise InvalidOrderDataError(f"Cannot cancel order with status {order.status}")
 
-    order.status = OrderStatus.CANCELLED
-    session.add(order)
-    session.commit()
-    session.refresh(order)
-    return order
+#     order.status = OrderStatus.CANCELLED
+#     session.add(order)
+#     session.commit()
+#     session.refresh(order)
+#     return order
