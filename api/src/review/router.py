@@ -7,10 +7,16 @@ from src.auth.dependencies import get_current_user
 from src.auth.models import User
 from src.database import get_session
 from src.pagination import PageResponse, PaginationParams
-from src.review.models import RatingStar, ReviewCreate, ReviewResponse, ReviewUpdate
+from src.review.models import (
+    BookRatingStatsResponse,
+    ReviewCreate,
+    ReviewResponse,
+    ReviewUpdate,
+)
 from src.review.service import (
     create_review,
     delete_review,
+    get_book_rating_stats,
     get_review,
     get_reviews,
     update_review,
@@ -49,8 +55,8 @@ def read_reviews(
     asc: Optional[bool] = Query(
         default=None, description="Sort reviews by rating in ascending order"
     ),
-    rating_star: Optional[RatingStar] = Query(
-        None, description="Filter by rating (1-5)"
+    rating_star: Optional[int] = Query(
+        None, description="Filter by rating (1-5)", ge=1, le=5
     ),
     session: Session = Depends(get_session),
 ) -> Any:
@@ -60,6 +66,8 @@ def read_reviews(
         pagination: The pagination parameters dependency.
         book_id: Optional filter by book ID.
         user_id: Optional filter by user ID.
+        asc: Optional boolean to sort by rating ascending. Defaults to descending.
+        rating_star: Optional rating (1-5) to filter reviews by.
         session: The database session dependency.
 
     Returns:
@@ -73,6 +81,24 @@ def read_reviews(
         book_id=book_id,
         user_id=user_id,
     )
+
+
+@router.get("/stats/{book_id}", response_model=BookRatingStatsResponse)
+def read_book_rating_stats(
+    book_id: int,
+    session: Session = Depends(get_session),
+) -> Any:
+    """Gets rating statistics for a specific book.
+
+    Args:
+        book_id: The ID of the book.
+        session: The database session dependency.
+
+    Returns:
+        Rating statistics including average rating and counts per star level.
+    """
+
+    return get_book_rating_stats(session=session, book_id=book_id)
 
 
 @router.get("/{review_id}", response_model=ReviewResponse)

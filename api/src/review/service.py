@@ -4,11 +4,16 @@ from typing import List, Optional
 import sqlmodel
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
-
+from sqlalchemy import case, func
 
 from src.exceptions import NotFoundError
 from src.pagination import PageResponse, PaginationParams
-from src.review.models import RatingStar, Review, ReviewCreate, ReviewUpdate
+from src.review.models import (
+    BookRatingStatsResponse,
+    Review,
+    ReviewCreate,
+    ReviewUpdate,
+)
 
 
 def create_review(
@@ -70,42 +75,87 @@ def get_reviews(
     pagination: PaginationParams,
     book_id: Optional[int] = None,
     user_id: Optional[int] = None,
-    rating_star: Optional[RatingStar] = None,
+    rating_star: Optional[int] = None,
     asc: Optional[bool] = False,
 ) -> PageResponse[Review]:
-    """Gets a paginated list of reviews with optional filtering.
+    """Retrieves a paginated list of reviews based on optional filters.
 
     Args:
         session: The database session.
-        pagination: Pagination parameters.
-        book_id: Optional filter by book ID.
-        user_id: Optional filter by user ID.
+        pagination: Pagination parameters (page, size).
+        book_id: Optional book ID to filter by.
+        user_id: Optional user ID to filter by.
+        rating_star: Optional rating (1-5) to filter by.
+        asc: Optional boolean to sort by rating ascending. Defaults to descending.
 
     Returns:
-        A paginated response containing reviews.
+        A PageResponse containing the list of reviews and pagination details.
     """
-    statement = select(Review)
+    query = select(Review)
 
     if book_id is not None:
-        statement = statement.where(Review.book_id == book_id)
+        query = query.where(Review.book_id == book_id)
     if user_id is not None:
-        statement = statement.where(Review.user_id == user_id)
+        query = query.where(Review.user_id == user_id)
     if rating_star is not None:
-        statement = statement.where(Review.rating == rating_star)
-    if asc:
-        statement = statement.order_by(Review.review_date.asc())
+        query = query.where(Review.rating == rating_star)
+
+    if asc is not None:
+        order_by_column = Review.rating
+        query = query.order_by(order_by_column.asc() if asc else order_by_column.desc())
     else:
-        statement = statement.order_by(Review.review_date.desc())
+        # Default sort by review_date desc
+        query = query.order_by(Review.review_date.desc())
 
-    results = session.exec(
-        statement.offset(pagination.offset).limit(pagination.page_size)
+    total_count_query = select(sqlmodel.func.count()).select_from(query.subquery())
+    total_count = session.exec(total_count_query).one()
+
+    paginated_query = query.offset(pagination.offset).limit(pagination.page_size)
+    results = session.exec(paginated_query).all()
+
+    # Use the create classmethod to correctly build the PageResponse
+    return PageResponse.create(items=results, total=total_count, params=pagination)
+
+
+def get_book_rating_stats(session: Session, book_id: int) -> BookRatingStatsResponse:
+    """Calculates rating statistics for a specific book.
+
+    Args:
+        session: The database session.
+        book_id: The ID of the book.
+
+    Returns:
+        A BookRatingStatsResponse object containing the statistics.
+    """
+    statement = (
+        select(
+            func.coalesce(func.avg(Review.rating), 0.0).label("average_rating"),
+            func.count(Review.id).label("total_reviews"),
+            func.sum(case((Review.rating == 5, 1), else_=0)).label("five_stars"),
+            func.sum(case((Review.rating == 4, 1), else_=0)).label("four_stars"),
+            func.sum(case((Review.rating == 3, 1), else_=0)).label("three_stars"),
+            func.sum(case((Review.rating == 2, 1), else_=0)).label("two_stars"),
+            func.sum(case((Review.rating == 1, 1), else_=0)).label("one_star"),
+        )
+        .select_from(Review)
+        .where(Review.book_id == book_id)
     )
-    reviews = results.all()
 
-    count_statement = select(sqlmodel.func.count()).select_from(statement.subquery())
-    total = session.exec(count_statement).one()
+    stats = session.exec(statement).first()
 
-    return PageResponse.create(items=reviews, total=total, params=pagination)
+    if stats is None or stats.total_reviews == 0:
+        # Return default values if no reviews or stats tuple is None
+        return BookRatingStatsResponse()
+
+    return BookRatingStatsResponse(
+        average_rating=float(stats.average_rating),
+        total_reviews=stats.total_reviews,
+        five_stars=stats.five_stars,
+        four_stars=stats.four_stars,
+        three_stars=stats.three_stars,
+        two_stars=stats.two_stars,
+        one_star=stats.one_star,
+    )
 
 
 def update_review(

@@ -5,6 +5,7 @@ from typing import Optional
 from pydantic import Field
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Relationship, SQLModel
+from pydantic import Field as PydanticField  # Alias pydantic Field to avoid conflict
 
 from src.auth.models import User
 from src.book.models import Book
@@ -89,3 +90,25 @@ class ReviewResponse(ReviewBase):
     """
 
     id: int
+
+
+class BookRatingStatsResponse(SQLModel):
+    """Response model for book rating statistics.
+
+    Attributes:
+        average_rating: The average rating of the book.
+        total_reviews: The total number of reviews for the book.
+        five_stars: The count of 5-star reviews.
+        four_stars: The count of 4-star reviews.
+        three_stars: The count of 3-star reviews.
+        two_stars: The count of 2-star reviews.
+        one_star: The count of 1-star reviews.
+    """
+
+    average_rating: float = PydanticField(default=0.0)
+    total_reviews: int = PydanticField(default=0)
+    five_stars: int = PydanticField(default=0)
+    four_stars: int = PydanticField(default=0)
+    three_stars: int = PydanticField(default=0)
+    two_stars: int = PydanticField(default=0)
+    one_star: int = PydanticField(default=0)
