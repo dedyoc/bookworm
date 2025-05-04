@@ -9,13 +9,13 @@ interface User {
   first_name: string;
   last_name: string;
   email: string;
-  // Add other user fields if necessary
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  token: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -24,12 +24,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('auth-token')); // Initialize token state
   const [isLoading, setIsLoading] = useState(true);
   const { clearCart } = useCart();
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const token = localStorage.getItem('auth-token');
       if (token) {
         try {
           const response = await fetch(`${API_BASE_URL}/auth/me`, {
@@ -45,25 +45,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Token invalid/expired
             localStorage.removeItem('auth-token');
             localStorage.removeItem('auth-user');
+            setToken(null);
+            setUser(null);
             console.error('Failed to fetch user with stored token:', response.statusText);
           }
         } catch (error) {
           console.error('Error fetching current user:', error);
           localStorage.removeItem('auth-token');
           localStorage.removeItem('auth-user');
+          setToken(null);
+          setUser(null);
         }
       }
       setIsLoading(false);
     };
 
     initializeAuth();
-  }, []);
+  }, [token]); // Re-run if token changes externally (unlikely here)
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
       const formData = new URLSearchParams();
-      formData.append('username', email); // FastAPI expects 'username'
+      formData.append('username', email);
       formData.append('password', password);
 
       const response = await fetch(`${API_BASE_URL}/auth/token`, {
@@ -80,18 +84,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const data = await response.json();
-      const token = data.access_token;
+      const receivedToken = data.access_token;
 
-      if (!token) {
+      if (!receivedToken) {
         throw new Error('Access token not received');
       }
 
-      localStorage.setItem('auth-token', token);
+      localStorage.setItem('auth-token', receivedToken);
+      setToken(receivedToken); 
 
-      // Fetch user details
       const userResponse = await fetch(`${API_BASE_URL}/auth/me`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${receivedToken}`, // Use received token
         },
       });
 
@@ -107,15 +111,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Login error:', error);
       localStorage.removeItem('auth-token');
       localStorage.removeItem('auth-user');
+      setToken(null); // Clear token on error
       setUser(null);
-      throw error; // Re-throw
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = async () => { 
-    const token = localStorage.getItem('auth-token');
     if (token) {
       try {
         await bookwormApi.logout(token);
@@ -127,6 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('auth-token');
     localStorage.removeItem('auth-user');
     localStorage.removeItem('auth-refresh-token');
+    setToken(null);
     setUser(null);
     clearCart();
   };
@@ -136,8 +141,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value = {
     user,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !!token,
     isLoading,
+    token,
     login,
     logout,
     // refreshToken, // Add if implemented

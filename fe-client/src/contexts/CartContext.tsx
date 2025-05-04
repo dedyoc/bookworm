@@ -7,6 +7,7 @@ export interface CartItem {
   authorName: string;
   imageUrl?: string;
   price: number;
+  discountPrice?: number;
   quantity: number;
 }
 
@@ -49,7 +50,7 @@ const initialState: CartState = {
 const calculateTotals = (items: CartItem[]): Pick<CartState, 'totalItems' | 'totalPrice'> => {
   return {
     totalItems: items.reduce((total, item) => total + item.quantity, 0),
-    totalPrice: items.reduce((total, item) => total + item.price * item.quantity, 0),
+    totalPrice: items.reduce((total, item) => total + (item.discountPrice??item.price) * item.quantity, 0),
   };
 };
 
@@ -129,7 +130,7 @@ const loadCartFromLocalStorage = (): CartState => {
   const savedCart = localStorage.getItem('bookworm-cart');
   return savedCart ? JSON.parse(savedCart) : initialState;
 };
-
+ 
 // Provider component
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cart, dispatch] = useReducer(cartReducer, loadCartFromLocalStorage());
