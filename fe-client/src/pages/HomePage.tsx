@@ -11,11 +11,12 @@ import {
   CarouselNext, 
   CarouselPrevious 
 } from '@/components/ui/carousel';
+import { BookResponse } from '@/lib/types';
 
 export function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [onSaleBooks, setOnSaleBooks] = useState<any[]>([]);
-  const [recommendedBooks, setRecommendedBooks] = useState<any[]>([]);
+  const [recommendedBooks, setRecommendedBooks] = useState<BookResponse[]>([]);
   const [popularBooks, setPopularBooks] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'recommended' | 'popular'>('recommended');
 
@@ -25,8 +26,8 @@ export function HomePage() {
       setIsLoading(true);
       try {
         const discountedBooks = await bookwormApi.getTopDiscountedBooks();
-        const recommendedBooksData = await bookwormApi.getFeaturedBooks('recommended');
-        const popularBooksData = await bookwormApi.getFeaturedBooks('popular');
+        const recommendedBooksData = await bookwormApi.getPopularBooks();
+        const popularBooksData = await bookwormApi.getRecommendedBooks();
         
         setOnSaleBooks(discountedBooks);
         setRecommendedBooks(recommendedBooksData);
@@ -58,7 +59,7 @@ export function HomePage() {
           <h2 className="text-2xl font-bold">On Sale</h2>
           <Link
             to="/shop"
-            search={{ sort: 'on-sale', page: 1 , limit: 15 }}
+            search={{ sort: 'on_sale', page: 1 , limit: 15 }}
             className="text-blue-700 hover:underline"
           >
             View All
@@ -94,7 +95,6 @@ export function HomePage() {
         )}
          {/* Featured Books Section */}
         <h2 className="text-2xl font-bold mb-6">Featured Books</h2>
-        {/* Closing tag added here */}
         <div className="border-gray-200 mb-6">
           <div className="flex space-x-8 justify-center">
             <button

@@ -18,19 +18,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Separator } from '@/components/ui/separator';
-import { StarIcon } from 'lucide-react';
 import Pagination from '@/components/Pagination';
 import { api } from '@/services/api';
 import QuantityInput from '@/components/QuantityInput';
 import { useCart } from '@/contexts/CartContext';
-import type { BookType, ReviewType } from '@/lib/types';
+import type { BookResponse, BookType, ReviewType } from '@/lib/types';
+import { bookwormApi } from '@/services/bookwormApi';
 
 
 export const ProductPage = () => {
   const { id } = useParams({ from: '/product/$id' });
   const { addItem } = useCart();
 
-  const [book, setBook] = useState<BookType | null>(null);
+  const [book, setBook] = useState<BookResponse | null>(null);
   const [isBookLoading, setIsBookLoading] = useState(true);
   const [bookError, setBookError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -42,6 +42,8 @@ export const ProductPage = () => {
   const [totalReviewPages, setTotalReviewPages] = useState(1);
   const [reviewSort, setReviewSort] = useState<'newest' | 'oldest' | 'rating-high' | 'rating-low'>('newest');
   const [isReviewLoading, setIsReviewLoading] = useState(true);
+  // Add state for star filter
+  const [starFilter, setStarFilter] = useState<number | null>(null);
 
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewDetails, setReviewDetails] = useState('');
@@ -50,13 +52,22 @@ export const ProductPage = () => {
   const [submitReviewSuccess, setSubmitReviewSuccess] = useState<string | null>(null);
   const [submitReviewError, setSubmitReviewError] = useState<string | null>(null);
 
+  // Mock star counts for the filter
+  const starCounts = { 
+    5: 124, 
+    4: 56, 
+    3: 25, 
+    2: 8, 
+    1: 3 
+  };
+
   useEffect(() => {
     const fetchBook = async () => {
       if (!id) return;
       setIsBookLoading(true);
       setBookError(null);
       try {
-        const fetchedBook = await api.getBookById(id);
+        const fetchedBook = await bookwormApi.getBook(id);
         setBook(fetchedBook);
       } catch (error) {
         console.error("Failed to fetch book:", error);
@@ -76,7 +87,8 @@ export const ProductPage = () => {
         const result = await api.getReviewsByBookId(id, { 
           page: reviewPage, 
           limit: reviewLimit,
-          sort: reviewSort 
+          sort: reviewSort,
+          //starFilter // Pass the star filter to the API
         });
         setReviews(result.reviews);
         setTotalReviews(result.total);
@@ -88,7 +100,7 @@ export const ProductPage = () => {
       }
     };
     fetchReviews();
-  }, [id, reviewPage, reviewLimit, reviewSort]);
+  }, [id, reviewPage, reviewLimit, reviewSort, starFilter]);
 
   const handleQuantityChange = (newQuantity: number) => {
     setQuantity(newQuantity);
@@ -98,12 +110,13 @@ export const ProductPage = () => {
     if (!book) return;
     addItem({
       id: book.id,
-      title: book.title,
-      authorName: book.author.name,
-      imageUrl: book.imageUrl,
-      price: book.discountPrice ?? book.price,
+      title: book.book_title,
+      authorName: book.author_name,
+      imageUrl: bookwormApi.getImageUrl(book),
+      price: Number(book.book_price),
+      discountPrice: book.discount_price ? Number(book.discount_price) : undefined,
     }, quantity);
-    console.log(`Added ${quantity} of ${book.title} to cart.`);
+    console.log(`Added ${quantity} of ${book.book_title} to cart.`);
   };
 
   const handleReviewPageChange = (newPage: number) => {
@@ -161,13 +174,13 @@ export const ProductPage = () => {
     return <div className="container mx-auto px-4 py-8 text-center">Book not found.</div>;
   }
 
-  const averageRating = book.rating?.toFixed(1) ?? 'N/A';
-  const reviewCount = book.reviewCount ?? totalReviews;
+  const averageRating = 4.3 // book.rating?.toFixed(1) ?? 'N/A';
+  const reviewCount = 3135 // book.reviewCount ?? totalReviews;
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl text-gray-600 mb-4">
-        {book.category.name}
+        {book.category_name}
       </h1>
       <Separator className="mb-8" />
 
@@ -178,10 +191,10 @@ export const ProductPage = () => {
         <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-lg border bg-card text-card-foreground shadow-sm p-6 space-y-4 h-fit">
           <div className="space-y-4">
             <AspectRatio ratio={2 / 3} className="bg-muted rounded-lg overflow-hidden max-w-sm mx-auto md:mx-0">
-              {book.imageUrl ? (
+              {book.book_cover_photo ? (
           <img
-            src={book.imageUrl}
-            alt={book.title}
+            src={book.book_cover_photo}
+            alt={book.book_title}
             className="object-cover w-full h-full"
           />
               ) : (
@@ -190,13 +203,13 @@ export const ProductPage = () => {
           </div>
               )}
             </AspectRatio>
-            <p className="text-lg text-gray-700">By {book.author.name}</p>
+            <p className="text-lg text-gray-700 text-right"><span className='text-lg text-bold'>By</span> {book.author_name}</p>
           </div>
           <div className="space-y-4">
-            <h1 className="text-3xl md:text-4xl font-bold">{book.title}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold">{book.book_title}</h1>
 
             <p className="text-gray-700 leading-relaxed">
-              {book.description}
+              {book.book_summary}
             </p>
           </div>
         </div>
@@ -204,16 +217,16 @@ export const ProductPage = () => {
         {/* Add to Cart */}
         <div className="md:col-span-2 rounded-lg border bg-card text-card-foreground shadow-sm space-y-4 h-fit">
           <div className="flex items-baseline gap-4 p-8 bg-gray-100">
-            {book.discountPrice ? (
+            {book.discount_price ? (
               <>
-                <span className="text-gray-500 line-through text-xl">${book.price.toFixed(2)}</span>
+                <span className="text-gray-500 line-through text-xl">${parseFloat(book.book_price).toFixed(2)}</span>
                 <span className="text-3xl font-bold text-red-600">
-                  ${(book.discountPrice).toFixed(2)}
+                  ${parseFloat(book.discount_price).toFixed(2)}
                 </span>
               </>
             ) : (
               <span className="text-3xl font-bold text-gray-600">
-                ${book.price.toFixed(2)}
+                ${parseFloat(book.book_price).toFixed(2)}
               </span>
             )}
           </div>
@@ -234,15 +247,43 @@ export const ProductPage = () => {
         </div>
 
         {/* Customer Reviews cols /3 */}
-        <div className="md:col-span-3 space-y-8 pt-8 md:pt-0 rounded-lg border bg-card text-card-foreground shadow-sm p-6 h-fit">
-          <h2 className="text-2xl font-bold">Customer Reviews</h2>
+        <div className="md:col-span-3 space-y-8 pt-8 rounded-lg border bg-card text-card-foreground shadow-sm p-6 h-fit">
+          <h2 className="text-2xl font-bold">
+            Customer Reviews 
+            {starFilter !== null && <span className="text-sm text-gray-500 font-normal ml-2">(Filtered by {starFilter} star)</span>}
+          </h2>
           
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-gray-50 p-4 rounded-lg">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold">{averageRating}</span>
-              {typeof book.rating === 'number' && book.rating > 0 && <StarIcon className="w-6 h-6 text-yellow-500 fill-current" />}
-              <span className="text-gray-600">({reviewCount} Reviews)</span>
+              <span className="text-3xl font-bold">{averageRating} Star</span>
             </div>
+          </div>
+
+          <div className="flex flex-wrap mb-4">
+           <span className="text-sm py-1.5 mx-5 rounded">({reviewCount})</span>
+
+            {[5, 4, 3, 2, 1].map((stars, index) => (
+              <button 
+                key={stars}
+                // onClick={() => handleStarFilterChange(stars)}
+                className={`flex text-sm py-1.5 rounded transition-colors ${
+                  starFilter === stars 
+                    ? 'text-blue-700 font-bold border-b-2 border-blue-700' 
+                    : 'text-gray-600 hover:text-blue-600'
+                }`}
+              >
+                {stars} stars ({starCounts[stars as keyof typeof starCounts]})
+                {index < 4 && <span >|</span>}
+              </button>
+            ))}
+            {starFilter !== null && (
+              <button
+                // onClick={() => handleStarFilterChange(null)} 
+                className="text-sm px-3 py-1.5 text-gray-600 hover:text-blue-600"
+              >
+                Clear filter
+              </button>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -269,7 +310,7 @@ export const ProductPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="5">Show 5</SelectItem>
-                  <SelectItem value="10">Show 10</SelectItem>
+                  <SelectItem value="15">Show 15</SelectItem>
                   <SelectItem value="20">Show 20</SelectItem>
                 </SelectContent>
               </Select>
@@ -280,16 +321,17 @@ export const ProductPage = () => {
             {isReviewLoading ? (
               <div className="text-center py-10">Loading reviews...</div>
             ) : reviews.length === 0 ? (
-              <div className="text-center py-10 text-gray-500">Be the first to review this book!</div>
+              <div className="text-center py-10 text-gray-500">
+                {starFilter !== null 
+                  ? `No ${starFilter}-star reviews found. Try a different filter.` 
+                  : 'Be the first to review this book!'}
+              </div>
             ) : (
               reviews.map((review, index) => (
                 <div key={review.id}>
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold">{review.title}</h3>
                     <span className="text-gray-500">|</span>
-                    <div className="flex">
-                      {review.rating} stars
-                    </div>
                   </div>
                   <p className="text-gray-700 mb-2">{review.content}</p>
                   <p className="text-xs text-gray-500">
@@ -302,13 +344,42 @@ export const ProductPage = () => {
           </div>
 
           {totalReviewPages > 1 && (
-            <Pagination
-              currentPage={reviewPage}
-              totalPages={totalReviewPages}
-              itemsPerPage={reviewLimit}
-              totalItems={totalReviews}
-              onPageChange={handleReviewPageChange}
-            />
+            <div className="flex justify-center mt-6">
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={reviewPage === 1}
+                  onClick={() => handleReviewPageChange(reviewPage - 1)}
+                >
+                  Previous
+                </Button>
+                {[...Array(Math.min(totalReviewPages, 5))].map((_, idx) => {
+                  const pageNumber = reviewPage > 3 && totalReviewPages > 5 
+                    ? reviewPage - 3 + idx + (reviewPage > totalReviewPages - 2 ? totalReviewPages - reviewPage - 2 : 0) 
+                    : idx + 1;
+                  
+                  return pageNumber <= totalReviewPages ? (
+                    <Button 
+                      key={pageNumber}
+                      variant={reviewPage === pageNumber ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleReviewPageChange(pageNumber)}
+                    >
+                      {pageNumber}
+                    </Button>
+                  ) : null;
+                })}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={reviewPage === totalReviewPages}
+                  onClick={() => handleReviewPageChange(reviewPage + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           )}
         </div>
 
@@ -363,7 +434,7 @@ export const ProductPage = () => {
           </Button>
         </div>
 
-      </div> {/* End Grid */}
+      </div>
     </div>
   );
 };
