@@ -3,6 +3,8 @@ import { useSearch, useNavigate } from '@tanstack/react-router';
 import BookCard from '@/components/BookCard';
 import Pagination from '@/components/Pagination';
 import { api } from '@/services/api';
+import { bookwormApi } from '@/services/bookwormApi';
+import { SortMode } from '@/lib/types';
 import { 
   Accordion, 
   AccordionContent, 
@@ -14,7 +16,7 @@ import { Separator } from '@radix-ui/react-separator';
 
 interface SortOption {
   label: string;
-  value: 'price-asc' | 'price-desc' | 'popularity' | 'on-sale';
+  value: 'price_low_to_high' | 'price_high_to_low' | 'popularity' | 'on_sale';
 }
 
 interface LimitOption {
@@ -38,16 +40,16 @@ export const ShopPage = () => {
     limit, 
     sort, 
     onSale, 
-    category: categoryFilter, 
-    author: authorFilter, 
+    category_id: categoryIdFilter, // Renamed from categoryFilter
+    author_id: authorIdFilter,     // Renamed from authorFilter
     minRating: minRatingFilter 
   } = search;
 
   const sortOptions: SortOption[] = [
-    { label: 'Price: Low to High', value: 'price-asc' },
-    { label: 'Price: High to Low', value: 'price-desc' },
+    { label: 'Price: Low to High', value: 'price_low_to_high' },
+    { label: 'Price: High to Low', value: 'price_high_to_low' },
     { label: 'Popularity', value: 'popularity' },
-    { label: 'On Sale', value: 'on-sale' },
+    { label: 'On Sale', value: 'on_sale' },
   ];
 
   const limitOptions: LimitOption[] = [
@@ -59,23 +61,40 @@ export const ShopPage = () => {
   const startItem = (page - 1) * limit + 1;
   const endItem = Math.min(page * limit, totalBooks);
   useEffect(() => {
-
     const fetchBooks = async () => {
       setIsLoading(true);
       try {
-        const result = await api.getBooks({
+        const sortModeMap: Record<string, SortMode> = {
+          'price_low_to_high': SortMode.PRICE_ASC,
+          'price_high_to_low': SortMode.PRICE_DESC,
+          'popularity': SortMode.POPULARITY,
+          'on_sale': SortMode.ON_SALE
+        };
+
+        const result = await bookwormApi.getBooks({
           page,
-          limit,
-          category: categoryFilter,
-          author: authorFilter,
-          minRating: minRatingFilter,
-          sort,
-          onSale
+          page_size: limit,
+          category_id: categoryIdFilter,
+          author_id: authorIdFilter,
+          min_rating: minRatingFilter,
+          sort_mode: sortModeMap[sort]
         });
         
-        setBooks(result.books);
+        const mappedBooks = result.items.map(book => ({
+          id: book.id,
+          title: book.book_title,
+          author: { 
+            id: book.author_id, 
+            name: book.author_name || 'Unknown Author'  // Ensure we have a fallback
+          },
+          imageUrl: bookwormApi.getImageUrl(book),
+          price: parseFloat(book.book_price), // Convert string price to number
+          discountPrice: book.discount_price ? parseFloat(book.discount_price) : undefined,
+        }));
+        
+        setBooks(mappedBooks);
         setTotalBooks(result.total);
-        setTotalPages(result.totalPages);
+        setTotalPages(result.pages);
       } catch (error) {
         console.error('Failed to fetch books:', error);
       } finally {
@@ -84,16 +103,17 @@ export const ShopPage = () => {
     };
 
     fetchBooks();
-  }, [page, limit, categoryFilter, authorFilter, minRatingFilter, sort, onSale]);
+  }, [page, limit, categoryIdFilter, authorIdFilter, minRatingFilter, sort, onSale]); // Update dependencies
 
   useEffect(() => {
     const fetchFilters = async () => {
       try {
+        console.log('Fetching filter options...');
         const [categoriesData, authorsData] = await Promise.all([
-          api.getCategories(),
-          api.getAuthors()
+          bookwormApi.getCategories(),
+          bookwormApi.getAuthors() 
         ]);
-        
+        console.log('Fetched categories:', categoriesData);
         setCategories(categoriesData);
         setAuthors(authorsData);
       } catch (error) {
@@ -132,10 +152,15 @@ export const ShopPage = () => {
     navigate({
       search: (prev) => {
         const newSearch = { ...prev, page: 1 };
-        if (value === undefined) {
+        // Ensure value is correctly typed if it's an ID
+        const finalValue = (filterType === 'category_id' || filterType === 'author_id') && typeof value === 'string' 
+                           ? parseInt(value, 10) 
+                           : value;
+
+        if (finalValue === undefined || (typeof finalValue === 'number' && isNaN(finalValue))) {
           delete newSearch[filterType];
         } else {
-          (newSearch as any)[filterType] = value;
+          (newSearch as any)[filterType] = finalValue;
         }
         return newSearch;
       }
@@ -143,20 +168,22 @@ export const ShopPage = () => {
   };
 
   const isFilterActive = () => {
-    return categoryFilter || authorFilter || minRatingFilter || onSale;
+    return categoryIdFilter || authorIdFilter || minRatingFilter || onSale; // Use renamed variables
   };
 
   const getFilterDescription = () => {
     const activeFilters = [];
     
-    if (categoryFilter) {
-      const category = categories.find(c => c.id === categoryFilter);
-      if (category) activeFilters.push(category.name);
+    if (categoryIdFilter) { // Use renamed variable
+      // Assuming categories fetched have 'id' and 'category_name'
+      const category = categories.find(c => c.id === categoryIdFilter); 
+      if (category) activeFilters.push(category.category_name); // Use category_name
     }
     
-    if (authorFilter) {
-      const author = authors.find(a => a.id === authorFilter);
-      if (author) activeFilters.push(author.name);
+    if (authorIdFilter) { // Use renamed variable
+      // Assuming authors fetched have 'id' and 'author_name'
+      const author = authors.find(a => a.id === authorIdFilter);
+      if (author) activeFilters.push(author.author_name); // Use author_name
     }
     
     if (minRatingFilter) {
@@ -180,7 +207,7 @@ export const ShopPage = () => {
       <Separator className="mb-6" />
       <div className="flex flex-col md:flex-row gap-8">
         <aside className="md:w-64 flex-shrink-0">
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-4">
             <h2 className="text-xl font-semibold mb-4">Filter By</h2>        
             <Accordion type="multiple" defaultValue={["categories", "authors", "rating"]} className="space-y-4">
               <AccordionItem value="categories" className="border rounded-md px-3">
@@ -190,10 +217,11 @@ export const ShopPage = () => {
                     {categories.map((category) => (
                       <div key={category.id} className="flex items-center justify-between">
                         <button
-                          onClick={() => applyFilter('category', categoryFilter === category.id ? undefined : category.id)}
-                          className={`text-sm hover:text-blue-700 ${categoryFilter === category.id ? 'text-blue-700 font-semibold' : 'text-gray-700'}`}
+                          // Pass 'category_id' and the numeric category.id
+                          onClick={() => applyFilter('category_id', categoryIdFilter === category.id ? undefined : category.id)}
+                          className={`text-sm hover:text-blue-700 ${categoryIdFilter === category.id ? 'text-blue-700 font-semibold' : 'text-gray-700'}`} // Use renamed variable
                         >
-                          {category.name}
+                          {category.category_name} {/* Use category_name */}
                         </button>
                       </div>
                     ))}
@@ -208,10 +236,11 @@ export const ShopPage = () => {
                     {authors.map((author) => (
                       <div key={author.id} className="flex items-center justify-between">
                         <button
-                          onClick={() => applyFilter('author', authorFilter === author.id ? undefined : author.id)}
-                          className={`text-sm hover:text-blue-700 ${authorFilter === author.id ? 'text-blue-700 font-semibold' : 'text-gray-700'}`}
+                          // Pass 'author_id' and the numeric author.id
+                          onClick={() => applyFilter('author_id', authorIdFilter === author.id ? undefined : author.id)}
+                          className={`text-sm hover:text-blue-700 ${authorIdFilter === author.id ? 'text-blue-700 font-semibold' : 'text-gray-700'}`} // Use renamed variable
                         >
-                          {author.name}
+                          {author.author_name} {/* Use author_name */}
                         </button>
                       </div>
                     ))}
@@ -323,7 +352,8 @@ export const ShopPage = () => {
               ))}
             </div>
           )}
-          
+
+
           {totalPages > 1 && (
             <div className="mt-8">
               <Pagination
