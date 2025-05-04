@@ -40,6 +40,17 @@ export interface ReviewType {
   date: string;
 }
 
+// Matches backend BookRatingStatsResponse
+export interface BookRatingStatsResponse {
+  average_rating: number;
+  total_reviews: number;
+  five_stars: number;
+  four_stars: number;
+  three_stars: number;
+  two_stars: number;
+  one_star: number;
+}
+
 export interface CategoryType {
   id: string | number;
   name: string;
@@ -90,6 +101,30 @@ export interface DiscountedBookTuple {
     updated_at?: string;
   };
   1: string;
+}
+
+// --- Review Types ---
+
+// Matches backend ReviewResponse
+export interface ReviewResponse {
+  id: number;
+  book_id: number;
+  user_id: number;
+  rating: number;
+  review_title: string;
+  review_details?: string | null; // Optional in backend model
+  review_date: string; // ISO date string
+  created_at: string;
+  updated_at: string;
+  // Optionally include user/book details if needed, but backend doesn't seem to nest them by default
+}
+
+// Matches backend ReviewCreate
+export interface ReviewCreate {
+  book_id: number;
+  rating: number;
+  review_title: string;
+  review_details?: string | null;
 }
 
 // --- Order Types ---

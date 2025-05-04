@@ -1,12 +1,14 @@
 import ky from 'ky';
 import type { 
   BookResponse, 
-  FeaturedBookType, 
   Token, 
   PageResponse, 
   SortMode,
   OrderCreate,
-  OrderResponse
+  OrderResponse,
+  ReviewResponse,
+  ReviewCreate,
+  BookRatingStatsResponse // Add BookRatingStatsResponse
 } from '@/lib/types'; 
 
 const API_BASE_URL = 'http://localhost:8000';
@@ -34,16 +36,6 @@ export const bookwormApi = {
     }
   },
 
-  getFeaturedBooks: async (type: FeaturedBookType): Promise<BookResponse[]> => {
-    try {
-      const endpoint = type === 'recommended' ? 'recommended' : 'popular';
-      const data = await ky.get(`${API_BASE_URL}/books/${endpoint}`).json<BookResponse[]>();
-      return data;
-    } catch (error) {
-      console.error(`Failed to fetch ${type} books:`, error);
-      throw error;
-    }
-  },
   getPopularBooks: async (): Promise<BookResponse[]> => {
     try {
       const data = await ky.get(`${API_BASE_URL}/books/popular`).json<BookResponse[]>();
@@ -82,12 +74,25 @@ export const bookwormApi = {
       throw error;
     }
   },
-  getBook: async (bookId: string): Promise<BookResponse> => {
+  getBook: async (bookId: number): Promise<BookResponse> => {
     try {
       const data = await ky.get(`${API_BASE_URL}/books/${bookId}`).json<BookResponse>();
       return data;
     } catch (error) {
       console.error('Failed to fetch book:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetches rating statistics for a specific book.
+   */
+  getBookRatingStats: async (bookId: number): Promise<BookRatingStatsResponse> => {
+    try {
+      const data = await ky.get(`${API_BASE_URL}/reviews/stats/${bookId}`).json<BookRatingStatsResponse>();
+      return data;
+    } catch (error) {
+      console.error(`Failed to fetch rating stats for book ID ${bookId}:`, error);
       throw error;
     }
   },
@@ -136,12 +141,49 @@ export const bookwormApi = {
     }
   },
 
-  getReviews: async (bookId: string): Promise<any[]> => {
+  /**
+   * Fetches reviews with pagination and filtering.
+   */
+  getReviews: async (params: {
+    book_id?: number;
+    user_id?: number;
+    page?: number;
+    page_size?: number;
+    rating_star?: number | null; // Filter by specific star rating
+    asc?: boolean | null; // Sorting direction (true for asc, false/null for desc)
+  }): Promise<PageResponse<ReviewResponse>> => {
     try {
-      const data = await ky.get(`${API_BASE_URL}/books/${bookId}/reviews`).json<any[]>();
+      const searchParams = new URLSearchParams();
+      if (params.book_id !== undefined) searchParams.append('book_id', params.book_id.toString());
+      if (params.user_id !== undefined) searchParams.append('user_id', params.user_id.toString());
+      if (params.page !== undefined) searchParams.append('page', params.page.toString());
+      if (params.page_size !== undefined) searchParams.append('page_size', params.page_size.toString());
+      if (params.rating_star !== undefined && params.rating_star !== null) searchParams.append('rating_star', params.rating_star.toString());
+      if (params.asc !== undefined && params.asc !== null) searchParams.append('asc', params.asc.toString());
+      
+      const data = await ky.get(`${API_BASE_URL}/reviews/`, { searchParams }).json<PageResponse<ReviewResponse>>();
       return data;
     } catch (error) {
       console.error('Failed to fetch reviews:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Creates a new review. Requires authentication token.
+   */
+  createReview: async (reviewData: ReviewCreate, token: string): Promise<ReviewResponse> => {
+    try {
+      const data = await ky.post(`${API_BASE_URL}/reviews/`, {
+        json: reviewData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }).json<ReviewResponse>();
+      return data;
+    } catch (error) {
+      console.error('Failed to create review:', error);
+      // Consider more specific error handling based on response status if needed
       throw error;
     }
   },

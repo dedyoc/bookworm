@@ -12,16 +12,16 @@ from src.book.models import Book
 from src.category.models import Category
 from src.config import settings  # Import settings to get DATABASE_URL
 from src.discount.models import Discount
-from src.order.models import Order, OrderItem, OrderStatus
+from src.order.models import Order, OrderItem
 from src.review.models import Review
 
 # Constants for the number of records to generate
-NUM_USERS = 20
-NUM_CATEGORIES = 10
-NUM_AUTHORS = 15
-NUM_BOOKS = 50
-NUM_REVIEWS_PER_BOOK = 3
-NUM_DISCOUNTS = 10
+NUM_USERS = 30
+NUM_CATEGORIES = 15
+NUM_AUTHORS = 70
+NUM_BOOKS = 200
+NUM_REVIEWS_PER_BOOK = 50
+NUM_DISCOUNTS = 30
 NUM_ORDERS = 30
 MAX_ITEMS_PER_ORDER = 5
 
@@ -243,7 +243,6 @@ def seed_orders(session: Session, users: list[User], books: list[Book]):
             user_id=user.id,
             order_date=order_date,
             order_amount=total_amount,
-            status=random.choice(list(OrderStatus)),
             created_at=order_date,
             updated_at=order_date,
         )

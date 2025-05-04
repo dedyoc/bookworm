@@ -242,7 +242,8 @@ def get_top_discounted_books(session: Session, limit: int = 10) -> List[BookResp
     """
     today = date.today()
 
-    subquery = (
+    # Base subquery to find active discounts per book and calculate amounts
+    base_subquery_stmt = (
         select(
             Discount.book_id,
             sqlmodel.func.max(Book.book_price - Discount.discount_price).label(
@@ -253,20 +254,28 @@ def get_top_discounted_books(session: Session, limit: int = 10) -> List[BookResp
         .join(Book, Discount.book_id == Book.id)
         .where(
             or_(
-                Discount.discount_start_date is None,
+                Discount.discount_start_date.is_(None),
                 Discount.discount_start_date <= today,
             ),
             or_(
-                Discount.discount_end_date is None,
+                Discount.discount_end_date.is_(None),
                 Discount.discount_end_date >= today,
             ),
         )
         .group_by(Discount.book_id)
         .order_by(sqlmodel.text("discount_amount DESC"))
-        .limit(limit)
-        .subquery()
     )
 
+    # --- Debugging
+    count_stmt = select(func.count()).select_from(base_subquery_stmt.alias("count_sq"))
+    unique_discounted_book_count = session.exec(count_stmt).one()
+    print(
+        f"DEBUG: Found {unique_discounted_book_count} unique books with active discounts before applying limit."
+    )
+
+    subquery = base_subquery_stmt.limit(limit).subquery()
+
+    # Main query using the limited subquery
     statement = (
         select(Book, Author.author_name, subquery.c.best_discount_price)
         .join(subquery, Book.id == subquery.c.book_id)

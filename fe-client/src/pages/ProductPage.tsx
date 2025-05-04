@@ -22,27 +22,28 @@ import Pagination from '@/components/Pagination';
 import { api } from '@/services/api';
 import QuantityInput from '@/components/QuantityInput';
 import { useCart } from '@/contexts/CartContext';
-import type { BookResponse, BookType, ReviewType } from '@/lib/types';
+import type { BookResponse, ReviewResponse, ReviewCreate, BookRatingStatsResponse } from '@/lib/types';
 import { bookwormApi } from '@/services/bookwormApi';
-
+import { useAuth } from '@/contexts/AuthContext';
 
 export const ProductPage = () => {
   const { id } = useParams({ from: '/product/$id' });
+  const numericId = Number(id);
   const { addItem, getItemQuantity } = useCart();
+  const { token, isAuthenticated } = useAuth();
 
   const [book, setBook] = useState<BookResponse | null>(null);
   const [isBookLoading, setIsBookLoading] = useState(true);
   const [bookError, setBookError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
 
-  const [reviews, setReviews] = useState<ReviewType[]>([]);
+  const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [reviewPage, setReviewPage] = useState(1);
   const [reviewLimit, setReviewLimit] = useState(5);
   const [totalReviews, setTotalReviews] = useState(0);
   const [totalReviewPages, setTotalReviewPages] = useState(1);
   const [reviewSort, setReviewSort] = useState<'newest' | 'oldest' | 'rating-high' | 'rating-low'>('newest');
   const [isReviewLoading, setIsReviewLoading] = useState(true);
-  // Add state for star filter
   const [starFilter, setStarFilter] = useState<number | null>(null);
 
   const [reviewTitle, setReviewTitle] = useState('');
@@ -52,22 +53,16 @@ export const ProductPage = () => {
   const [submitReviewSuccess, setSubmitReviewSuccess] = useState<string | null>(null);
   const [submitReviewError, setSubmitReviewError] = useState<string | null>(null);
 
-  // Mock star counts for the filter
-  const starCounts = { 
-    5: 124, 
-    4: 56, 
-    3: 25, 
-    2: 8, 
-    1: 3 
-  };
+  const [ratingStats, setRatingStats] = useState<BookRatingStatsResponse | null>(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
 
   useEffect(() => {
     const fetchBook = async () => {
-      if (!id) return;
+      if (!numericId) return;
       setIsBookLoading(true);
       setBookError(null);
       try {
-        const fetchedBook = await bookwormApi.getBook(id);
+        const fetchedBook = await bookwormApi.getBook(numericId);
         setBook(fetchedBook);
       } catch (error) {
         console.error("Failed to fetch book:", error);
@@ -77,22 +72,38 @@ export const ProductPage = () => {
       }
     };
     fetchBook();
-  }, [id]);
+  }, [numericId]);
+
+  useEffect(() => {
+    const fetchRatingStats = async () => {
+      if (!numericId) return;
+      setIsStatsLoading(true);
+      try {
+        const stats = await bookwormApi.getBookRatingStats(numericId);
+        setRatingStats(stats);
+      } catch (error) {
+        console.error("Failed to fetch rating stats:", error);
+      } finally {
+        setIsStatsLoading(false);
+      }
+    };
+    fetchRatingStats();
+  }, [numericId]);
 
   useEffect(() => {
     const fetchReviews = async () => {
-      if (!id) return;
+      if (!numericId) return;
       setIsReviewLoading(true);
       try {
-        const result = await api.getReviewsByBookId(id, { 
+        const result = await bookwormApi.getReviews({ 
+          book_id: numericId,
           page: reviewPage, 
-          limit: reviewLimit,
-          sort: reviewSort,
-          //starFilter // Pass the star filter to the API
+          page_size: reviewLimit,
+          rating_star: starFilter
         });
-        setReviews(result.reviews);
+        setReviews(result.items);
         setTotalReviews(result.total);
-        setTotalReviewPages(result.totalPages);
+        setTotalReviewPages(result.pages);
       } catch (error) {
         console.error("Failed to fetch reviews:", error);
       } finally {
@@ -100,7 +111,7 @@ export const ProductPage = () => {
       }
     };
     fetchReviews();
-  }, [id, reviewPage, reviewLimit, reviewSort, starFilter]);
+  }, [numericId, reviewPage, reviewLimit, reviewSort, starFilter]);
 
   const handleQuantityChange = (newQuantity: number) => {
     setQuantity(newQuantity);
@@ -142,29 +153,54 @@ export const ProductPage = () => {
     setReviewPage(1);
   };
 
+  const handleStarFilterChange = (rating: number | null) => {
+    setStarFilter(rating);
+    setReviewPage(1);
+  };
+
   const handleSubmitReview = async () => {
-    if (!id || !reviewRating || !reviewTitle || !reviewDetails) {
+    if (!numericId || !reviewRating || !reviewTitle || !reviewDetails) {
       setSubmitReviewError("Please fill in all fields and select a rating.");
       return;
     }
+    if (!isAuthenticated || !token) {
+      setSubmitReviewError("Please log in to submit a review.");
+      return;
+    }
+
     setIsSubmittingReview(true);
     setSubmitReviewError(null);
     setSubmitReviewSuccess(null);
+
+    const reviewData: ReviewCreate = {
+      book_id: numericId,
+      rating: reviewRating,
+      review_title: reviewTitle,
+      review_details: reviewDetails,
+    };
+
     try {
-      await api.addReview(id, {
-        rating: reviewRating,
-        title: reviewTitle,
-        content: reviewDetails,
-      });
+      await bookwormApi.createReview(reviewData, token); 
       setSubmitReviewSuccess("Review submitted successfully!");
       setReviewTitle('');
       setReviewDetails('');
       setReviewRating(undefined);
       setReviewPage(1); 
-      setReviewSort('newest'); 
-    } catch (error) {
+      setStarFilter(null);
+    } catch (error: any) {
       console.error("Failed to submit review:", error);
-      setSubmitReviewError("Failed to submit review. Please try again.");
+      let detail = "Failed to submit review. Please try again.";
+      if (error.response && typeof error.response.json === 'function') {
+        try {
+          const errorBody = await error.response.json();
+          if (errorBody.detail) {
+            detail = errorBody.detail === "User has already reviewed this book" 
+              ? "You have already submitted a review for this book." 
+              : errorBody.detail;
+          }
+        } catch (parseError) {}
+      }
+      setSubmitReviewError(detail);
     } finally {
       setIsSubmittingReview(false);
     }
@@ -173,7 +209,7 @@ export const ProductPage = () => {
   const startReviewItem = totalReviews > 0 ? (reviewPage - 1) * reviewLimit + 1 : 0;
   const endReviewItem = Math.min(reviewPage * reviewLimit, totalReviews);
 
-  if (isBookLoading) {
+  if (isBookLoading || isStatsLoading) {
     return <div className="container mx-auto px-4 py-8 text-center">Loading book details...</div>;
   }
   if (bookError) {
@@ -183,8 +219,15 @@ export const ProductPage = () => {
     return <div className="container mx-auto px-4 py-8 text-center">Book not found.</div>;
   }
 
-  const averageRating = 4.3 // book.rating?.toFixed(1) ?? 'N/A';
-  const reviewCount = 3135 // book.reviewCount ?? totalReviews;
+  const averageRating = ratingStats ? ratingStats.average_rating.toFixed(1) : 'N/A';
+  const reviewCount = ratingStats ? ratingStats.total_reviews : 0;
+  const starCounts = ratingStats ? {
+    5: ratingStats.five_stars,
+    4: ratingStats.four_stars,
+    3: ratingStats.three_stars,
+    2: ratingStats.two_stars,
+    1: ratingStats.one_star,
+  } : { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -193,23 +236,21 @@ export const ProductPage = () => {
       </h1>
       <Separator className="mb-8" />
 
-      {/* Grid cols 5 */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-x-12 gap-y-8">
         
-        {/* Book Info col3 */}
         <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-lg border bg-card text-card-foreground shadow-sm p-6 space-y-4 h-fit">
           <div className="space-y-4">
             <AspectRatio ratio={2 / 3} className="bg-muted rounded-lg overflow-hidden max-w-sm mx-auto md:mx-0">
               {book.book_cover_photo ? (
-          <img
-            src={book.book_cover_photo}
-            alt={book.book_title}
-            className="object-cover w-full h-full"
-          />
+                <img
+                  src={book.book_cover_photo}
+                  alt={book.book_title}
+                  className="object-cover w-full h-full"
+                />
               ) : (
-          <div className="flex items-center justify-center h-full text-gray-500">
-            No Image Available
-          </div>
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  No Image Available
+                </div>
               )}
             </AspectRatio>
             <p className="text-lg text-gray-700 text-right"><span className='text-lg text-bold'>By</span> {book.author_name}</p>
@@ -223,7 +264,6 @@ export const ProductPage = () => {
           </div>
         </div>
 
-        {/* Add to Cart */}
         <div className="md:col-span-2 rounded-lg border bg-card text-card-foreground shadow-sm space-y-4 h-fit">
           <div className="flex items-baseline gap-4 p-8 bg-gray-100">
             {book.discount_price ? (
@@ -255,7 +295,6 @@ export const ProductPage = () => {
           </div>
         </div>
 
-        {/* Customer Reviews cols /3 */}
         <div className="md:col-span-3 space-y-8 pt-8 rounded-lg border bg-card text-card-foreground shadow-sm p-6 h-fit">
           <h2 className="text-2xl font-bold">
             Customer Reviews 
@@ -268,31 +307,32 @@ export const ProductPage = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap mb-4">
-           <span className="text-sm py-1.5 mx-5 rounded">({reviewCount})</span>
+          <div className="flex flex-wrap mb-4 items-center">
+            <button 
+              onClick={() => handleStarFilterChange(null)}
+              className={`text-sm py-1.5 mx-5 rounded font-medium ${
+                starFilter === null 
+                  ? 'text-blue-700 font-bold border-b-2 border-blue-700' 
+                  : 'text-gray-600 hover:text-blue-600'
+              }`}
+            >
+              ({reviewCount} Reviews)
+            </button>
 
             {[5, 4, 3, 2, 1].map((stars, index) => (
               <button 
                 key={stars}
-                // onClick={() => handleStarFilterChange(stars)}
+                onClick={() => handleStarFilterChange(stars)}
                 className={`flex text-sm py-1.5 rounded transition-colors ${
                   starFilter === stars 
                     ? 'text-blue-700 font-bold border-b-2 border-blue-700' 
                     : 'text-gray-600 hover:text-blue-600'
                 }`}
               >
-                {stars} stars ({starCounts[stars as keyof typeof starCounts]})
-                {index < 4 && <span >|</span>}
+                {stars} stars ({starCounts[stars as keyof typeof starCounts]}) 
+                {index < 4 && <span className="mx-2 text-gray-300">|</span>}
               </button>
             ))}
-            {starFilter !== null && (
-              <button
-                // onClick={() => handleStarFilterChange(null)} 
-                className="text-sm px-3 py-1.5 text-gray-600 hover:text-blue-600"
-              >
-                Clear filter
-              </button>
-            )}
           </div>
 
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -332,19 +372,18 @@ export const ProductPage = () => {
             ) : reviews.length === 0 ? (
               <div className="text-center py-10 text-gray-500">
                 {starFilter !== null 
-                  ? `No ${starFilter}-star reviews found. Try a different filter.` 
+                  ? `No ${starFilter}-star reviews found.` 
                   : 'Be the first to review this book!'}
               </div>
             ) : (
               reviews.map((review, index) => (
                 <div key={review.id}>
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold">{review.title}</h3>
-                    <span className="text-gray-500">|</span>
+                    <h3 className="font-semibold">{review.review_title}</h3>
                   </div>
-                  <p className="text-gray-700 mb-2">{review.content}</p>
+                  <p className="text-gray-700 mb-2">{review.review_details}</p>
                   <p className="text-xs text-gray-500">
-                    {new Date(review.date).toLocaleDateString()}
+                    {new Date(review.review_date).toLocaleDateString()}
                   </p>
                   {index < reviews.length - 1 && <Separator className="mt-6" />}
                 </div>
@@ -353,46 +392,18 @@ export const ProductPage = () => {
           </div>
 
           {totalReviewPages > 1 && (
-            <div className="flex justify-center mt-6">
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={reviewPage === 1}
-                  onClick={() => handleReviewPageChange(reviewPage - 1)}
-                >
-                  Previous
-                </Button>
-                {[...Array(Math.min(totalReviewPages, 5))].map((_, idx) => {
-                  const pageNumber = reviewPage > 3 && totalReviewPages > 5 
-                    ? reviewPage - 3 + idx + (reviewPage > totalReviewPages - 2 ? totalReviewPages - reviewPage - 2 : 0) 
-                    : idx + 1;
-                  
-                  return pageNumber <= totalReviewPages ? (
-                    <Button 
-                      key={pageNumber}
-                      variant={reviewPage === pageNumber ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleReviewPageChange(pageNumber)}
-                    >
-                      {pageNumber}
-                    </Button>
-                  ) : null;
-                })}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={reviewPage === totalReviewPages}
-                  onClick={() => handleReviewPageChange(reviewPage + 1)}
-                >
-                  Next
-                </Button>
-              </div>
+            <div className="mt-8">
+              <Pagination
+                currentPage={reviewPage}
+                totalPages={totalReviewPages}
+                itemsPerPage={reviewLimit}
+                totalItems={totalReviews}
+                onPageChange={handleReviewPageChange}
+              />
             </div>
           )}
         </div>
 
-        {/* Write a Review - Added md:col-span-2 */}
         <div className="md:col-span-2 rounded-lg border bg-card text-card-foreground shadow-sm p-6 space-y-4 h-fit">
           <h3 className="text-lg font-semibold leading-none tracking-tight mb-4">Write a Review</h3>
           
@@ -438,8 +449,8 @@ export const ProductPage = () => {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleSubmitReview} disabled={isSubmittingReview}>
-            {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+          <Button onClick={handleSubmitReview} disabled={isSubmittingReview || !isAuthenticated}>
+            {isSubmittingReview ? 'Submitting...' : (isAuthenticated ? 'Submit Review' : 'Log in to Review')}
           </Button>
         </div>
 
