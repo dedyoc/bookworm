@@ -28,7 +28,7 @@ import { bookwormApi } from '@/services/bookwormApi';
 
 export const ProductPage = () => {
   const { id } = useParams({ from: '/product/$id' });
-  const { addItem } = useCart();
+  const { addItem, getItemQuantity } = useCart();
 
   const [book, setBook] = useState<BookResponse | null>(null);
   const [isBookLoading, setIsBookLoading] = useState(true);
@@ -108,6 +108,15 @@ export const ProductPage = () => {
 
   const handleAddToCart = () => {
     if (!book) return;
+
+    const currentQuantityInCart = getItemQuantity(book.id);
+    const potentialTotalQuantity = currentQuantityInCart + quantity;
+
+    if (potentialTotalQuantity > 8) {
+      alert(`You already have ${currentQuantityInCart} of this book in your cart. You cannot add more than 8 total.`);
+      return; 
+    }
+
     addItem({
       id: book.id,
       title: book.book_title,
