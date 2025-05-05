@@ -4,21 +4,41 @@ import QuantityInput from '@/components/QuantityInput';
 import { Separator } from '@/components/ui/separator';
 import { Trash2 } from 'lucide-react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { bookwormApi } from '@/services/bookwormApi';
-import type { OrderItemCreate } from '@/lib/types';
+import type { OrderItemCreate, OrderResponse } from '@/lib/types';
+import SignInModal from '@/components/SignInModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 export const CartPage: React.FC = () => {
   const { cart, updateQuantity, removeItem, clearCart } = useCart();
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [createdOrder, setCreatedOrder] = useState<OrderResponse | null>(null);
+  const [isCheckingCart, setIsCheckingCart] = useState(false);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const [updateDialogMessages, setUpdateDialogMessages] = useState<string[]>([]);
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
 
   const handleQuantityChange = (id: string | number, newQuantity: number) => {
-    updateQuantity(id, newQuantity);
+    if (newQuantity < 1) {
+      handleRemoveItem(id);
+    } else {
+      updateQuantity(id, newQuantity);
+    }
   };
 
   const handleRemoveItem = (id: string | number) => {
@@ -27,7 +47,7 @@ export const CartPage: React.FC = () => {
 
   const handlePlaceOrder = async () => {
     if (!isAuthenticated || !token) {
-      setOrderError("Please log in to place an order.");
+      setIsSignInModalOpen(true);
       return;
     }
     if (cart.items.length === 0) {
@@ -35,35 +55,136 @@ export const CartPage: React.FC = () => {
       return;
     }
 
+    setIsCheckingCart(true);
     setIsPlacingOrder(true);
     setOrderError(null);
-
-    const orderItems: OrderItemCreate[] = cart.items.map(item => ({
-      book_id: Number(item.id),
-      quantity: item.quantity,
-    }));
+    setUpdateDialogMessages([]);
+    let cartNeedsUpdate = false;
+    const itemsToRemove: (string | number)[] = [];
+    const validationMessages: string[] = [];
 
     try {
-      const createdOrder = await bookwormApi.createOrder({ items: orderItems }, token);
-      console.log('Order placed successfully:', createdOrder);
+      const validationPromises = cart.items.map(item =>
+        bookwormApi.getBook(parseInt(item.id as string))
+          .then(fetchedBook => ({ type: 'success' as const, fetchedBook, originalItem: item }))
+          .catch(error => ({ type: 'error' as const, error, originalItem: item }))
+      );
+
+      const results = await Promise.all(validationPromises);
+
+      results.forEach(result => {
+        if (result.type === 'success') {
+          const { fetchedBook, originalItem } = result;
+          const fetchedPrice = parseFloat(fetchedBook.book_price);
+          const fetchedDiscountPrice = fetchedBook.discount_price ? parseFloat(fetchedBook.discount_price) : undefined;
+
+          let itemUpdated = false;
+          let updateReason = "";
+
+          if (originalItem.price !== fetchedPrice) {
+            itemUpdated = true;
+            updateReason += ` Price changed from $${originalItem.price.toFixed(2)} to $${fetchedPrice.toFixed(2)}.`;
+          }
+          if (originalItem.discountPrice !== fetchedDiscountPrice) {
+            if (originalItem.discountPrice === undefined && fetchedDiscountPrice !== undefined) {
+              updateReason += ` Now on sale for $${fetchedDiscountPrice.toFixed(2)}.`;
+            } else if (originalItem.discountPrice !== undefined && fetchedDiscountPrice === undefined) {
+              updateReason += ` No longer on sale (was $${originalItem.discountPrice.toFixed(2)}).`;
+            } else if (originalItem.discountPrice !== undefined && fetchedDiscountPrice !== undefined && originalItem.discountPrice !== fetchedDiscountPrice) {
+              updateReason += ` Sale price changed from $${originalItem.discountPrice.toFixed(2)} to $${fetchedDiscountPrice.toFixed(2)}.`;
+            }
+            itemUpdated = true;
+          }
+          if (originalItem.title !== fetchedBook.book_title) {
+            itemUpdated = true;
+            updateReason += ` Title updated.`;
+          }
+
+          if (itemUpdated) {
+            cartNeedsUpdate = true;
+            validationMessages.push(`"${originalItem.title}":${updateReason}`);
+          }
+        } else {
+          const { error, originalItem } = result;
+          let isNotFoundError = false;
+          if (error?.response?.status === 404) {
+            isNotFoundError = true;
+          } else if (error instanceof Error && error.message.toLowerCase().includes("not found")) {
+            isNotFoundError = true;
+          }
+
+          if (isNotFoundError) {
+            cartNeedsUpdate = true;
+            itemsToRemove.push(originalItem.id);
+            validationMessages.push(`"${originalItem.title}" is no longer available and has been removed from your cart.`);
+          } else {
+            console.error(`Failed to validate item ${originalItem.id}:`, error);
+            cartNeedsUpdate = true;
+            validationMessages.push(`Could not verify "${originalItem.title}". Please check your connection or try again later.`);
+          }
+        }
+      });
+
+      setIsCheckingCart(false);
+
+      if (cartNeedsUpdate) {
+        itemsToRemove.forEach(id => removeItem(id));
+        setUpdateDialogMessages(validationMessages);
+        setShowUpdateDialog(true);
+        setIsPlacingOrder(false);
+        return;
+      }
+
+      const orderItems: OrderItemCreate[] = cart.items.map(item => ({
+        book_id: Number(item.id),
+        quantity: item.quantity,
+      }));
+
+      const order = await bookwormApi.createOrder({ items: orderItems }, token);
+      console.log('Order placed successfully:', order);
+      setCreatedOrder(order);
       clearCart();
-      alert(`Order ${createdOrder.id} placed successfully!`);
+      setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error("Failed to place order:", error);
+      console.error("Failed to place order or validation processing error:", error);
       let detail = "Failed to place order. Please try again.";
       if (error.response && typeof error.response.json === 'function') {
         try {
           const errorBody = await error.response.json();
           if (errorBody.detail) {
-            detail = errorBody.detail;
+            detail = typeof errorBody.detail === 'string' ? errorBody.detail : JSON.stringify(errorBody.detail);
           }
-        } catch (parseError) {}
+        } catch (parseError) {
+          console.error("Failed to parse error response body:", parseError);
+        }
+      } else if (error instanceof Error) {
+        detail = error.message;
       }
       setOrderError(detail);
-    } finally {
+      setIsCheckingCart(false);
       setIsPlacingOrder(false);
     }
   };
+
+  const handleSignIn = async (email: string, password: string) => {
+    try {
+      await login(email, password);
+      setIsSignInModalOpen(false);
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (showSuccessDialog) {
+      timer = setTimeout(() => {
+        setShowSuccessDialog(false);
+        navigate({ to: '/shop' });
+      }, 10000);
+    }
+    return () => clearTimeout(timer);
+  }, [showSuccessDialog, navigate]);
 
   const placeholderImage = 'https://picsum.photos/80/120';
 
@@ -73,14 +194,14 @@ export const CartPage: React.FC = () => {
         Your cart: {cart.totalItems} item{cart.totalItems !== 1 ? 's' : ''}
       </h1>
 
-      {cart.items.length === 0 ? (
+      {cart.items.length === 0 && !showSuccessDialog ? (
         <div className="text-center py-12 border rounded-lg bg-gray-50">
           <h2 className="text-xl text-gray-600 mb-4">Your cart is currently empty.</h2>
           <Button asChild>
             <Link to="/shop">Continue Shopping</Link>
           </Button>
         </div>
-      ) : (
+      ) : cart.items.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
@@ -88,7 +209,8 @@ export const CartPage: React.FC = () => {
                 <div className="col-span-3">Product</div>
                 <div className="text-right">Price</div>
                 <div className="text-center">Quantity</div>
-                <div className="text-right">Total</div>
+                  <div className="text-right">Total</div>
+                  <div></div>
               </div>
 
               {cart.items.map((item, index) => (
@@ -100,7 +222,7 @@ export const CartPage: React.FC = () => {
                       className="w-16 h-24 object-cover rounded"
                     />
                     <div>
-                      <Link to="/product/$id" params={{ id: String(item.id) }} className="font-medium hover:text-blue-700 line-clamp-2">
+                      <Link to="/product/$id" params={{ id: String(item.id) }} target='_blank' className="font-medium hover:text-blue-700 line-clamp-2">
                         {item.title}
                       </Link>
                       <p className="text-sm text-muted-foreground">{item.authorName}</p>
@@ -130,7 +252,7 @@ export const CartPage: React.FC = () => {
                   <div className="flex justify-center items-center">
                     <QuantityInput
                       initialValue={item.quantity}
-                      min={1}
+                      min={0}
                       max={8}
                       onChange={(newQuantity) => handleQuantityChange(item.id, newQuantity)}
                     />
@@ -168,16 +290,59 @@ export const CartPage: React.FC = () => {
                 <Button 
                   className="w-full" 
                   size="lg" 
-                  disabled={cart.items.length === 0 || isPlacingOrder}
+                  disabled={cart.items.length === 0 || isPlacingOrder || isCheckingCart}
                   onClick={handlePlaceOrder}
                 >
-                  {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
+                  {isCheckingCart ? 'Checking Cart...' : (isPlacingOrder ? 'Placing Order...' : 'Place Order')}
                 </Button>
               </div>
             </div>
           </div>
         </div>
-      )}
+      ) : null }
+
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Order Placed Successfully!</DialogTitle>
+            <DialogDescription>
+              {createdOrder ? `Your order #${createdOrder.id} has been placed.` : 'Your order has been placed.'}
+              <br />
+              You will be redirected to the shop page shortly.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cart Updated</DialogTitle>
+            <DialogDescription>
+              Some items in your cart have been updated due to changes in availability or details:
+              <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
+                {updateDialogMessages.map((msg, index) => (
+                  <li key={index}>{msg}</li>
+                ))}
+              </ul>
+              Please review your updated cart before proceeding.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" onClick={() => setShowUpdateDialog(false)}>
+                OK
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <SignInModal
+        isOpen={isSignInModalOpen}
+        onClose={() => setIsSignInModalOpen(false)}
+        onSignIn={handleSignIn}
+      />
     </div>
   );
 };
