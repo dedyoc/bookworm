@@ -188,11 +188,19 @@ export const ProductPage = () => {
       return;
     }
     
-    if (!numericId || reviewRating === undefined || !reviewTitle) { 
-      setSubmitReviewError("Please select a rating and add a title.");
+    // Updated validation: Check for rating, title presence, and title length
+    if (reviewRating === undefined) {
+      setSubmitReviewError("Please select a rating.");
       return;
     }
-
+    if (!reviewTitle) {
+      setSubmitReviewError("Please add a title.");
+      return;
+    }
+    if (reviewTitle.length > 120) {
+      setSubmitReviewError("Title cannot exceed 120 characters.");
+      return;
+    }
 
     setIsSubmittingReview(true); 
     setSubmitReviewError(null); 
@@ -484,6 +492,7 @@ export const ProductPage = () => {
               value={reviewTitle}
               onChange={(e) => setReviewTitle(e.target.value)}
               disabled={isSubmittingReview}
+              maxLength={120} // Add maxLength attribute
             />
           </div>
           <div className="grid gap-2">
