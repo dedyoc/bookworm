@@ -30,7 +30,6 @@ router = APIRouter(prefix="/reviews", tags=["reviews"])
 def create_review_endpoint(
     review_in: ReviewCreate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
 ) -> Any:
     """Creates a new review.
 
@@ -42,9 +41,7 @@ def create_review_endpoint(
     Returns:
         The created review.
     """
-    return create_review(
-        session=session, review_create=review_in, user_id=current_user.id
-    )
+    return create_review(session=session, review_create=review_in)
 
 
 @router.get("/", response_model=PageResponse[ReviewResponse])

@@ -7,7 +7,6 @@ from sqlalchemy import BigInteger
 from sqlmodel import Field, Relationship, SQLModel
 from pydantic import Field as PydanticField  # Alias pydantic Field to avoid conflict
 
-from src.auth.models import User
 from src.book.models import Book
 from src.models import TimestampModel
 
@@ -35,7 +34,6 @@ class ReviewBase(SQLModel):
 
     Attributes:
         book_id: The ID of the book being reviewed.
-        user_id: The ID of the user who wrote the review.
         rating: The rating given (1-5 stars).
         review_title: The title of the review.
         review_details: Optional detailed review text.
@@ -43,7 +41,6 @@ class ReviewBase(SQLModel):
     """
 
     book_id: int = Field(sa_type=BigInteger, foreign_key="book.id")
-    user_id: int = Field(sa_type=BigInteger)
     rating: int = Field(ge=1, le=5)
     review_title: str = Field(max_length=120)
     review_details: Optional[str] = None
@@ -56,7 +53,6 @@ class Review(ReviewBase, TimestampModel, table=True):
     Attributes:
         id: The primary key of the review.
         book: Relationship to the book being reviewed.
-        user: Relationship to the user who wrote the review.
     """
 
     id: Optional[int] = Field(sa_type=BigInteger, default=None, primary_key=True)

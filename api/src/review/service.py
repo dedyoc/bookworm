@@ -16,9 +16,7 @@ from src.review.models import (
 )
 
 
-def create_review(
-    session: Session, review_create: ReviewCreate, user_id: int
-) -> Review:
+def create_review(session: Session, review_create: ReviewCreate) -> Review:
     """Creates a new review.
 
     Args:
