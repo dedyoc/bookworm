@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional
 
 import sqlmodel
@@ -13,6 +14,7 @@ from src.review.models import (
     Review,
     ReviewCreate,
     ReviewUpdate,
+    ReviewDateSort,
 )
 
 
@@ -74,9 +76,10 @@ def get_reviews(
     book_id: Optional[int] = None,
     user_id: Optional[int] = None,
     rating_star: Optional[int] = None,
-    asc: Optional[bool] = False,
+    sort_by_rating_asc: Optional[bool] = None,
+    sort_by_date: Optional[ReviewDateSort] = ReviewDateSort.NEWEST,
 ) -> PageResponse[Review]:
-    """Retrieves a paginated list of reviews based on optional filters.
+    """Retrieves a paginated list of reviews based on optional filters and sorting.
 
     Args:
         session: The database session.
@@ -84,7 +87,8 @@ def get_reviews(
         book_id: Optional book ID to filter by.
         user_id: Optional user ID to filter by.
         rating_star: Optional rating (1-5) to filter by.
-        asc: Optional boolean to sort by rating ascending. Defaults to descending.
+        sort_by_rating_asc: Optional boolean to sort by rating ascending (true) or descending (false). Takes precedence over date sorting.
+        sort_by_date: Optional sorting by review date ('newest' or 'oldest'). Defaults to 'newest'.
 
     Returns:
         A PageResponse containing the list of reviews and pagination details.
@@ -98,11 +102,18 @@ def get_reviews(
     if rating_star is not None:
         query = query.where(Review.rating == rating_star)
 
-    if asc is not None:
+    # Apply sorting
+    if sort_by_rating_asc is not None:
+        # Sort by rating if specified (takes precedence)
         order_by_column = Review.rating
-        query = query.order_by(order_by_column.asc() if asc else order_by_column.desc())
+        query = query.order_by(
+            order_by_column.asc() if sort_by_rating_asc else order_by_column.desc(),
+            Review.review_date.desc(),
+        )  # Add secondary sort by date
+    elif sort_by_date == ReviewDateSort.OLDEST:
+        # Sort by date ascending if specified
+        query = query.order_by(Review.review_date.asc())
     else:
-        # Default sort by review_date desc
         query = query.order_by(Review.review_date.desc())
 
     total_count_query = select(sqlmodel.func.count()).select_from(query.subquery())
@@ -111,7 +122,6 @@ def get_reviews(
     paginated_query = query.offset(pagination.offset).limit(pagination.page_size)
     results = session.exec(paginated_query).all()
 
-    # Use the create classmethod to correctly build the PageResponse
     return PageResponse.create(items=results, total=total_count, params=pagination)
 
 

@@ -12,6 +12,7 @@ from src.review.models import (
     ReviewCreate,
     ReviewResponse,
     ReviewUpdate,
+    ReviewDateSort,
 )
 from src.review.service import (
     create_review,
@@ -49,21 +50,27 @@ def read_reviews(
     pagination: PaginationParams = Depends(),
     book_id: Optional[int] = Query(None, description="Filter by book ID"),
     user_id: Optional[int] = Query(None, description="Filter by user ID"),
-    asc: Optional[bool] = Query(
-        default=None, description="Sort reviews by rating in ascending order"
+    sort_by_rating_asc: Optional[bool] = Query(
+        default=None,
+        description="Sort reviews by rating in ascending order (true) or descending (false). Overrides sort_by_date.",
+    ),
+    sort_by_date: Optional[ReviewDateSort] = Query(
+        default=ReviewDateSort.NEWEST,
+        description="Sort reviews by date: 'newest' or 'oldest'. Default is 'newest'.",
     ),
     rating_star: Optional[int] = Query(
         None, description="Filter by rating (1-5)", ge=1, le=5
     ),
     session: Session = Depends(get_session),
 ) -> Any:
-    """Gets a paginated list of reviews with optional filtering.
+    """Gets a paginated list of reviews with optional filtering and sorting.
 
     Args:
         pagination: The pagination parameters dependency.
         book_id: Optional filter by book ID.
         user_id: Optional filter by user ID.
-        asc: Optional boolean to sort by rating ascending. Defaults to descending.
+        sort_by_rating_asc: Optional boolean to sort by rating ascending (true) or descending (false). Takes precedence over date sorting.
+        sort_by_date: Optional sorting by review date ('newest' or 'oldest'). Defaults to 'newest'.
         rating_star: Optional rating (1-5) to filter reviews by.
         session: The database session dependency.
 
@@ -74,7 +81,8 @@ def read_reviews(
         session=session,
         pagination=pagination,
         rating_star=rating_star,
-        asc=asc,
+        sort_by_rating_asc=sort_by_rating_asc,
+        sort_by_date=sort_by_date,
         book_id=book_id,
         user_id=user_id,
     )

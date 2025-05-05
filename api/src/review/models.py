@@ -29,6 +29,13 @@ class RatingStar(Enum):
     FIVE = 5
 
 
+class ReviewDateSort(str, Enum):
+    """Enum for review date sorting options."""
+
+    NEWEST = "newest"
+    OLDEST = "oldest"
+
+
 class ReviewBase(SQLModel):
     """Base review model with common fields.
 

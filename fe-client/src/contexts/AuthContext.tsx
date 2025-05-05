@@ -137,7 +137,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // TODO: Implement token refresh logic if needed
-  // const refreshToken = async () => { ... }
+  const refreshToken = async () => { 
+    if (token) {
+      bookwormApi.refreshToken(token)
+        .then((data) => {
+          const newToken = data.access_token;
+          setToken(newToken);
+          localStorage.setItem('auth-token', newToken);
+        })
+        .catch((error) => {
+          console.error('Token refresh failed:', error);
+          logout(); // refresh fails
+        });
+    }
+  }
 
   const value = {
     user,
@@ -146,7 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     token,
     login,
     logout,
-    // refreshToken, // Add if implemented
+    refreshToken, // Add if implemented
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

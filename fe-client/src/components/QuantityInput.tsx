@@ -20,10 +20,10 @@ const QuantityInput = ({
   }, [initialValue]);
   
   const handleDecrease = () => {
-    if (quantity > min) {
-      const newValue = quantity - 1;
+    const newValue = quantity - 1;
+    onChange?.(newValue); 
+        if (quantity > min) {
       setQuantity(newValue);
-      onChange?.(newValue);
     }
   };
   

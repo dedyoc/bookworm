@@ -8,7 +8,7 @@ import type {
   OrderResponse,
   ReviewResponse,
   ReviewCreate,
-  BookRatingStatsResponse // Add BookRatingStatsResponse
+  BookRatingStatsResponse,
 } from '@/lib/types'; 
 
 const API_BASE_URL = 'http://localhost:8000';
@@ -150,8 +150,9 @@ export const bookwormApi = {
     user_id?: number;
     page?: number;
     page_size?: number;
-    rating_star?: number | null; // Filter by specific star rating
-    asc?: boolean | null; // Sorting direction (true for asc, false/null for desc)
+    rating_star?: number | null; 
+    sort_by_rating_asc?: boolean | null; 
+    sort_by_date?: any | null; // TODO: Define a more specific type for sort_by_date
   }): Promise<PageResponse<ReviewResponse>> => {
     try {
       const searchParams = new URLSearchParams();
@@ -160,7 +161,13 @@ export const bookwormApi = {
       if (params.page !== undefined) searchParams.append('page', params.page.toString());
       if (params.page_size !== undefined) searchParams.append('page_size', params.page_size.toString());
       if (params.rating_star !== undefined && params.rating_star !== null) searchParams.append('rating_star', params.rating_star.toString());
-      if (params.asc !== undefined && params.asc !== null) searchParams.append('asc', params.asc.toString());
+      
+      if (params.sort_by_rating_asc !== undefined && params.sort_by_rating_asc !== null) {
+        searchParams.append('sort_by_rating_asc', params.sort_by_rating_asc.toString());
+      } else if (params.sort_by_date !== undefined && params.sort_by_date !== null) {
+        // Only add sort_by_date if sort_by_rating is not used, as rating takes precedence
+        searchParams.append('sort_by_date', params.sort_by_date);
+      }
       
       const data = await ky.get(`${API_BASE_URL}/reviews/`, { searchParams }).json<PageResponse<ReviewResponse>>();
       return data;
@@ -184,7 +191,6 @@ export const bookwormApi = {
       return data;
     } catch (error) {
       console.error('Failed to create review:', error);
-      // Consider more specific error handling based on response status if needed
       throw error;
     }
   },

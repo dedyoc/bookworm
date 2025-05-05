@@ -19,12 +19,12 @@ import {
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Separator } from '@/components/ui/separator';
 import Pagination from '@/components/Pagination';
-import { api } from '@/services/api';
 import QuantityInput from '@/components/QuantityInput';
 import { useCart } from '@/contexts/CartContext';
-import type { BookResponse, ReviewResponse, ReviewCreate, BookRatingStatsResponse } from '@/lib/types';
+import type { BookResponse, ReviewResponse, ReviewCreate, BookRatingStatsResponse, ReviewDateSort } from '@/lib/types';
 import { bookwormApi } from '@/services/bookwormApi';
 import { useAuth } from '@/contexts/AuthContext';
+import defaultImage from '@/assets/default-cover.jpg';
 
 export const ProductPage = () => {
   const { id } = useParams({ from: '/product/$id' });
@@ -95,11 +95,35 @@ export const ProductPage = () => {
       if (!numericId) return;
       setIsReviewLoading(true);
       try {
+        // Map frontend sort state to backend API parameters
+        let sortParams: { 
+          sort_by_rating_asc?: boolean | null; 
+          sort_by_date?: ReviewDateSort | null 
+        } = {};
+
+        switch (reviewSort) {
+          case 'newest':
+            sortParams.sort_by_date = 'newest';
+            break;
+          case 'oldest':
+            sortParams.sort_by_date = 'oldest';
+            break;
+          case 'rating-high':
+            sortParams.sort_by_rating_asc = false; // Descending
+            break;
+          case 'rating-low':
+            sortParams.sort_by_rating_asc = true; // Ascending
+            break;
+          default:
+            sortParams.sort_by_date = 'newest'; // Default sort
+        }
+
         const result = await bookwormApi.getReviews({ 
           book_id: numericId,
           page: reviewPage, 
           page_size: reviewLimit,
-          rating_star: starFilter
+          rating_star: starFilter,
+          ...sortParams // Spread the determined sort parameters
         });
         setReviews(result.items);
         setTotalReviews(result.total);
@@ -159,25 +183,28 @@ export const ProductPage = () => {
   };
 
   const handleSubmitReview = async () => {
-    if (!numericId || !reviewRating || !reviewTitle || !reviewDetails) {
-      setSubmitReviewError("Please fill in all fields and select a rating.");
+    if (isNaN(numericId)) {
+      setSubmitReviewError("Invalid Book ID.");
       return;
     }
-    if (!isAuthenticated || !token) {
-      setSubmitReviewError("Please log in to submit a review.");
+    
+    if (!numericId || reviewRating === undefined || !reviewTitle) { 
+      setSubmitReviewError("Please select a rating and add a title.");
       return;
     }
 
-    setIsSubmittingReview(true);
-    setSubmitReviewError(null);
-    setSubmitReviewSuccess(null);
+    setIsSubmittingReview(true); 
+    setSubmitReviewError(null); 
+    setSubmitReviewSuccess(null); 
 
     const reviewData: ReviewCreate = {
       book_id: numericId,
       rating: reviewRating,
       review_title: reviewTitle,
-      review_details: reviewDetails,
+      review_details: reviewDetails.trim() === '' ? null : reviewDetails,
     };
+
+    console.log("Submitting review data:", JSON.stringify(reviewData, null, 2)); 
 
     try {
       await bookwormApi.createReview(reviewData, token); 
@@ -186,21 +213,47 @@ export const ProductPage = () => {
       setReviewDetails('');
       setReviewRating(undefined);
       setReviewPage(1); 
-      setStarFilter(null);
+      setStarFilter(null); 
     } catch (error: any) {
       console.error("Failed to submit review:", error);
-      let detail = "Failed to submit review. Please try again.";
+      let errorDetailString = "Failed to submit review. Please try again."; 
+
+      if (error.response) {
+        error.response.json().then((body: any) => {
+          console.error("API Error Response Body:", body);
+        }).catch((e: any) => {
+          console.error("Failed to parse error response body as JSON:", e);
+        });
+      }
+
       if (error.response && typeof error.response.json === 'function') {
         try {
           const errorBody = await error.response.json();
-          if (errorBody.detail) {
-            detail = errorBody.detail === "User has already reviewed this book" 
+          
+          if (typeof errorBody.detail === 'string') {
+            errorDetailString = errorBody.detail === "User has already reviewed this book" 
               ? "You have already submitted a review for this book." 
               : errorBody.detail;
+          } 
+          else if (Array.isArray(errorBody.detail)) {
+            const firstError = errorBody.detail[0];
+            if (firstError && typeof firstError.msg === 'string') {
+              const field = firstError.loc && Array.isArray(firstError.loc) ? firstError.loc.slice(-1)[0] : 'field';
+              errorDetailString = `Input error for '${field}': ${firstError.msg}`; 
+            } else if (firstError && typeof firstError === 'string') {
+              errorDetailString = firstError;
+            }
+          } 
+          else if (typeof errorBody.message === 'string') {
+             errorDetailString = errorBody.message;
           }
-        } catch (parseError) {}
+
+        } catch (parseError) {
+          console.error("Failed to parse error response body:", parseError);
+        }
       }
-      setSubmitReviewError(detail);
+      
+      setSubmitReviewError(errorDetailString); 
     } finally {
       setIsSubmittingReview(false);
     }
@@ -245,6 +298,11 @@ export const ProductPage = () => {
                 <img
                   src={book.book_cover_photo}
                   alt={book.book_title}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null; // prevents looping
+                    e.currentTarget.src = defaultImage; // fallback image
+                  }
+                  }
                   className="object-cover w-full h-full"
                 />
               ) : (
@@ -316,7 +374,7 @@ export const ProductPage = () => {
                   : 'text-gray-600 hover:text-blue-600'
               }`}
             >
-              ({reviewCount} Reviews)
+              ({reviewCount})
             </button>
 
             {[5, 4, 3, 2, 1].map((stars, index) => (
@@ -325,7 +383,7 @@ export const ProductPage = () => {
                 onClick={() => handleStarFilterChange(stars)}
                 className={`flex text-sm py-1.5 rounded transition-colors ${
                   starFilter === stars 
-                    ? 'text-blue-700 font-bold border-b-2 border-blue-700' 
+                    ? 'text-blue-700 font-bold border-blue-700' 
                     : 'text-gray-600 hover:text-blue-600'
                 }`}
               >
@@ -380,10 +438,15 @@ export const ProductPage = () => {
                 <div key={review.id}>
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold">{review.review_title}</h3>
+                    <span className="text-sm text-gray-500">| {review.rating} star{review.rating !== 1 ? 's' : ''}</span>
                   </div>
                   <p className="text-gray-700 mb-2">{review.review_details}</p>
                   <p className="text-xs text-gray-500">
-                    {new Date(review.review_date).toLocaleDateString()}
+                    {new Date(review.review_date).toLocaleDateString("en-US", {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
                   </p>
                   {index < reviews.length - 1 && <Separator className="mt-6" />}
                 </div>
@@ -449,8 +512,8 @@ export const ProductPage = () => {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleSubmitReview} disabled={isSubmittingReview || !isAuthenticated}>
-            {isSubmittingReview ? 'Submitting...' : (isAuthenticated ? 'Submit Review' : 'Log in to Review')}
+          <Button onClick={handleSubmitReview} disabled={isSubmittingReview}>
+            {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
           </Button>
         </div>
 
