@@ -9,6 +9,9 @@ import type {
   ReviewResponse,
   ReviewCreate,
   BookRatingStatsResponse,
+  CategoryResponse,
+  AuthorResponse,
+  ReviewDateSort,
 } from '@/lib/types'; 
 
 const API_BASE_URL = 'http://localhost:8000';
@@ -121,9 +124,9 @@ export const bookwormApi = {
     return `https://picsum.photos/id/${book.id % 30}/200/300`;
   },
 
-  getCategories: async (): Promise<any[]> => {
+  getCategories: async (): Promise<CategoryResponse[]> => {
     try {
-      const data = await ky.get(`${API_BASE_URL}/categories/all`).json<any[]>();
+      const data = await ky.get(`${API_BASE_URL}/categories/all`).json<CategoryResponse[]>();
       console.log('Categories response:', data);
       return data;
     } catch (error) {
@@ -132,9 +135,9 @@ export const bookwormApi = {
     }
   },
 
-  getAuthors: async (): Promise<any[]> => {
+  getAuthors: async (): Promise<AuthorResponse[]> => {
     try {
-      const data = await ky.get(`${API_BASE_URL}/authors/all`).json<any[]>();
+      const data = await ky.get(`${API_BASE_URL}/authors/all`).json<AuthorResponse[]>();
       return data;
     } catch (error) {
       console.error('Failed to fetch authors:', error);
@@ -152,7 +155,7 @@ export const bookwormApi = {
     page_size?: number;
     rating_star?: number | null; 
     sort_by_rating_asc?: boolean | null; 
-    sort_by_date?: any | null; // TODO: Define a more specific type for sort_by_date
+    sort_by_date?: ReviewDateSort | null;
   }): Promise<PageResponse<ReviewResponse>> => {
     try {
       const searchParams = new URLSearchParams();

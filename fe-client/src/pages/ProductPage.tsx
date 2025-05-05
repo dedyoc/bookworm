@@ -23,14 +23,12 @@ import QuantityInput from '@/components/QuantityInput';
 import { useCart } from '@/contexts/CartContext';
 import type { BookResponse, ReviewResponse, ReviewCreate, BookRatingStatsResponse, ReviewDateSort } from '@/lib/types';
 import { bookwormApi } from '@/services/bookwormApi';
-import { useAuth } from '@/contexts/AuthContext';
 import defaultImage from '@/assets/default-cover.jpg';
 
 export const ProductPage = () => {
   const { id } = useParams({ from: '/product/$id' });
   const numericId = Number(id);
   const { addItem, getItemQuantity } = useCart();
-  const { token, isAuthenticated } = useAuth();
 
   const [book, setBook] = useState<BookResponse | null>(null);
   const [isBookLoading, setIsBookLoading] = useState(true);

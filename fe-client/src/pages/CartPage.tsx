@@ -180,7 +180,9 @@ export const CartPage: React.FC = () => {
     if (showSuccessDialog) {
       timer = setTimeout(() => {
         setShowSuccessDialog(false);
-        navigate({ to: '/shop' });
+        navigate({
+          to: '/shop', search: { sort: 'on_sale', page: 1 , limit: 15 }
+         });
       }, 10000);
     }
     return () => clearTimeout(timer);
@@ -198,7 +200,9 @@ export const CartPage: React.FC = () => {
         <div className="text-center py-12 border rounded-lg bg-gray-50">
           <h2 className="text-xl text-gray-600 mb-4">Your cart is currently empty.</h2>
           <Button asChild>
-            <Link to="/shop">Continue Shopping</Link>
+            <Link
+              to="/shop"
+              search={{ sort: 'on_sale', page: 1 , limit: 15 }}>Continue Shopping</Link>
           </Button>
         </div>
       ) : cart.items.length > 0 ? (
