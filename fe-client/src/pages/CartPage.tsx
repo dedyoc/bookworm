@@ -209,23 +209,22 @@ export const CartPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-              <div className="hidden md:grid grid-cols-6 gap-4 items-center p-4 font-medium text-muted-foreground border-b">
+              <div className="hidden sm:grid grid-cols-6 gap-4 items-center p-4 font-medium text-muted-foreground border-b">
                 <div className="col-span-3">Product</div>
-                <div className="text-right">Price</div>
+                <div className="text-center sm:text-right">Price</div>
                 <div className="text-center">Quantity</div>
-                  <div className="text-right">Total</div>
-                  <div></div>
+                <div className="text-center sm:text-right pr-30">Total</div>
               </div>
 
               {cart.items.map((item, index) => (
-                <div key={item.id} className={`grid grid-cols-4 md:grid-cols-6 gap-4 items-center p-4 ${index < cart.items.length - 1 ? 'border-b' : ''}`}>
-                  <div className="col-span-4 md:col-span-3 flex items-center gap-4">
+                <div key={item.id} className={`grid grid-cols-1 sm:grid-cols-6 gap-4 items-center p-4 ${index < cart.items.length - 1 ? 'border-b' : ''}`}>
+                  <div className="col-span-1 sm:col-span-3 flex items-center gap-4">
                     <img
                       src={item.imageUrl || placeholderImage}
                       alt={item.title}
-                      className="w-16 h-24 object-cover rounded"
+                      className="w-16 h-24 object-cover rounded flex-shrink-0"
                     />
-                    <div>
+                    <div className="flex-grow">
                       <Link to="/product/$id" params={{ id: String(item.id) }} target='_blank' className="font-medium hover:text-blue-700 line-clamp-2">
                         {item.title}
                       </Link>
@@ -233,7 +232,7 @@ export const CartPage: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="md:hidden text-red-500 hover:text-red-700 mt-2"
+                        className="sm:hidden text-red-500 hover:text-red-700 mt-2 -ml-2"
                         onClick={() => handleRemoveItem(item.id)}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -242,9 +241,10 @@ export const CartPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="text-right font-medium">
+                  <div className="col-span-1 sm:col-span-1 text-left sm:text-right font-medium">
+                    <span className="sm:hidden font-medium text-muted-foreground mr-2">Price:</span>
                     {item.discountPrice !== undefined ? (
-                      <div className="flex flex-col items-end">
+                      <div className="inline-flex flex-col items-start sm:items-end">
                         <span className="text-red-600">${item.discountPrice.toFixed(2)}</span>
                         <span className="text-xs text-gray-500 line-through">${item.price.toFixed(2)}</span>
                       </div>
@@ -253,7 +253,8 @@ export const CartPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex justify-center items-center">
+                  <div className="col-span-1 sm:col-span-1 flex justify-start sm:justify-center items-center">
+                    <span className="sm:hidden font-medium text-muted-foreground mr-2">Quantity:</span>
                     <QuantityInput
                       initialValue={item.quantity}
                       min={0}
@@ -262,12 +263,13 @@ export const CartPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="text-right font-medium flex justify-end items-center gap-2">
+                  <div className="col-span-1 sm:col-span-1 text-left sm:text-right font-medium flex justify-start sm:justify-between items-center gap-2">
+                    <span className="sm:hidden font-medium text-muted-foreground mr-2">Total:</span>
                     <span>${((item.discountPrice ?? item.price) * item.quantity).toFixed(2)}</span>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hidden md:inline-flex text-red-500 hover:text-red-700"
+                      className="hidden sm:inline-flex text-red-500 hover:text-red-700"
                       onClick={() => handleRemoveItem(item.id)}
                     >
                       <Trash2 className="w-4 h-4" />

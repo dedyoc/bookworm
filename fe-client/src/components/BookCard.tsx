@@ -23,7 +23,7 @@ const BookCard = ({
   return (
     <Link
       to={`/product/${id}`}
-      params={{ id }}
+      params={{ id: String(id) }}
       className="group flex flex-col h-full shadow-sm bg-white rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300"
     >
       <AspectRatio ratio={2 / 3} className="w-full">
