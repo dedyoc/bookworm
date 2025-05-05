@@ -39,6 +39,7 @@ export const bookwormApi = {
   getPopularBooks: async (): Promise<BookResponse[]> => {
     try {
       const data = await ky.get(`${API_BASE_URL}/books/popular`).json<BookResponse[]>();
+      console.log('Popular books response:', data);
       return data;
     } catch (error) {
       console.error('Failed to fetch popular books:', error);

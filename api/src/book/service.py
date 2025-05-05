@@ -6,6 +6,7 @@ import sqlmodel
 from sqlmodel import Session, select, func, or_
 from sqlalchemy import Float
 from sqlalchemy.sql.functions import coalesce
+from sqlalchemy.orm import aliased
 
 from src.author.models import Author
 from src.book.models import Book, BookCreate, BookResponse, BookUpdate
@@ -13,8 +14,6 @@ from src.discount.models import Discount
 from src.exceptions import NotFoundError
 from src.pagination import PageResponse, PaginationParams
 from src.review.models import Review
-
-# Give me state to choose 4 different sort mode from: on sale, popularity, price low to high, price high to low
 
 
 class SortMode(Enum):
@@ -266,13 +265,7 @@ def get_top_discounted_books(session: Session, limit: int = 10) -> List[BookResp
         .order_by(sqlmodel.text("discount_amount DESC"))
     )
 
-    # --- Debugging
-    count_stmt = select(func.count()).select_from(base_subquery_stmt.alias("count_sq"))
-    unique_discounted_book_count = session.exec(count_stmt).one()
-    print(
-        f"DEBUG: Found {unique_discounted_book_count} unique books with active discounts before applying limit."
-    )
-
+    # Apply limit to the subquery
     subquery = base_subquery_stmt.limit(limit).subquery()
 
     # Main query using the limited subquery
@@ -326,67 +319,190 @@ def get_featured_book(
 
 
 def get_recommended_book(session: Session, limit: int = 8) -> List[BookResponse]:
-    """Gets recommended books (separate endpoint for potential future requirement).
+    """Gets recommended books based on highest average rating, including discount info.
 
     Args:
         session: The database session.
         limit: The maximum number of recommended books to retrieve.
 
     Returns:
-        A list of recommended books.
+        A list of recommended books as BookResponse objects.
     """
-    statement = (
-        select(Book, Discount.discount_price, Author.author_name)
-        .join(Review)
-        .where(
-            Book.book_price > 0,
-            Discount.discount_start_date <= datetime.now(),
-            Discount.discount_end_date >= datetime.now(),
-        )
-        .join(Discount)
-        .join(Author)
-        .group_by(Book.id, Discount.discount_price, Author.author_name)
-        .order_by(sqlmodel.func.avg(Review.rating).desc())
-        .limit(limit)
+    # Step 1: Subquery to find top N book IDs based on average rating
+    top_rated_books_subquery_stmt = (
+        select(Book.id, func.avg(Review.rating).label("avg_rating"))
+        .join(
+            Review, Book.id == Review.book_id
+        )  # Inner join ensures books have reviews
+        .group_by(Book.id)
+        .order_by(func.avg(Review.rating).desc(), Book.id.asc())
     )
-    results = session.exec(statement)
 
-    books = []
-    book_tuples = results.all()
-    for book, discount_price, author_name in book_tuples:
-        book_item = book.model_dump()
-        book_item["discount_price"] = discount_price
-        book_item["author_name"] = author_name
-        books.append(book_item)
-    return books
+    # Apply limit for the actual subquery used later
+    top_rated_books_subquery = top_rated_books_subquery_stmt.limit(limit).subquery()
+
+    # Step 2: Active discount subquery (reuse logic)
+    today = date.today()
+    active_discount_subquery = (
+        select(
+            Discount.book_id,
+            func.min(Discount.discount_price).label("best_discount_price"),
+        )
+        .where(
+            or_(
+                Discount.discount_start_date.is_(None),
+                Discount.discount_start_date <= today,
+            ),
+            or_(
+                Discount.discount_end_date.is_(None),
+                Discount.discount_end_date >= today,
+            ),
+        )
+        .group_by(Discount.book_id)
+        .subquery()
+    )
+
+    # Step 3: Final price calculation (reuse logic)
+    final_price = coalesce(
+        active_discount_subquery.c.best_discount_price, Book.book_price
+    ).label("final_price")
+
+    # Step 4: Main query to fetch details for the recommended books
+    statement = (
+        select(
+            Book,
+            Author.author_name,
+            final_price,
+            top_rated_books_subquery.c.avg_rating,  # Keep avg_rating for ordering
+        )
+        # Join Book with the subquery containing only the top rated book IDs
+        .join(top_rated_books_subquery, Book.id == top_rated_books_subquery.c.id)
+        .outerjoin(Author, Book.author_id == Author.id)
+        # Outer join to get the best active discount price if available
+        .outerjoin(
+            active_discount_subquery, Book.id == active_discount_subquery.c.book_id
+        )
+        # Order the final result by average rating, then lowest price, then ID
+        .order_by(
+            top_rated_books_subquery.c.avg_rating.desc(),
+            final_price.asc(),
+            Book.id.asc(),
+        )
+    )
+
+    # Step 5: Execute and process results
+    raw_results = session.exec(statement).all()
+
+    books_response = []
+    # Unpack results (book object, author name, calculated final price, avg rating)
+    # avg_rating is selected but not directly used in the response model here, only for ordering
+    for book, author_name, calculated_final_price, _ in raw_results:
+        book_resp = BookResponse.model_validate(book)
+        book_resp.author_name = author_name
+        # Set discount_price only if there's an active discount lower than original price
+        if (
+            calculated_final_price is not None
+            and calculated_final_price < book.book_price
+        ):
+            book_resp.discount_price = calculated_final_price
+        else:
+            book_resp.discount_price = None
+        books_response.append(book_resp)
+
+    return books_response
 
 
 def get_popular_book(session: Session, limit: int = 8) -> List[BookResponse]:
-    """Gets popular books (separate endpoint for potential future requirement).
+    """Gets popular books ordered by review count.
 
-    Args:m
+    Args:
         session: The database session.
         limit: The maximum number of popular books to retrieve.
 
     Returns:
-        A list of popular books.
+        A list of popular books as BookResponse objects.
     """
-    statement = (
-        select(Book, Discount.discount_price, Author.author_name)
-        .join(Review, isouter=True)
-        .join(Discount, isouter=True)
-        .join(Author, isouter=True)
-        .group_by(Book.id, Discount.discount_price, Author.author_name)
-        .order_by(sqlmodel.func.count(Review.id).desc())
-        .limit(limit)
+    # Step 1: Subquery to find top N popular book IDs and their review counts
+    # Define the base statement without the limit first for counting
+    popular_book_ids_subquery_stmt = (
+        select(Book.id, func.count(Review.id).label("review_count"))
+        .outerjoin(
+            Review, Book.id == Review.book_id
+        )  # Use outerjoin to include books without reviews (count will be 0)
+        .group_by(Book.id)
+        .order_by(
+            func.count(Review.id).desc(), Book.id.asc()
+        )  # Order by review count desc
     )
-    results = session.exec(statement)
 
-    books = []
-    book_tuples = results.all()
-    for book, discount_price, author_name in book_tuples:
-        book_item = book.model_dump()
-        book_item["discount_price"] = discount_price
-        book_item["author_name"] = author_name
-        books.append(book_item)
-    return books
+    # Apply limit for the actual subquery used later
+    popular_book_ids_subquery = popular_book_ids_subquery_stmt.limit(limit).subquery()
+
+    # Step 2: Active discount subquery (reuse logic from get_books/get_top_discounted)
+    today = date.today()
+    active_discount_subquery = (
+        select(
+            Discount.book_id,
+            func.min(Discount.discount_price).label("best_discount_price"),
+        )
+        .where(
+            or_(
+                Discount.discount_start_date.is_(None),
+                Discount.discount_start_date <= today,
+            ),
+            or_(
+                Discount.discount_end_date.is_(None),
+                Discount.discount_end_date >= today,
+            ),
+        )
+        .group_by(Discount.book_id)
+        .subquery()
+    )
+
+    # Step 3: Final price calculation (reuse logic)
+    final_price = coalesce(
+        active_discount_subquery.c.best_discount_price, Book.book_price
+    ).label("final_price")
+
+    # Step 4: Main query to fetch details for the popular books
+    statement = (
+        select(
+            Book,
+            Author.author_name,
+            final_price,
+            popular_book_ids_subquery.c.review_count,  # Keep review_count for ordering
+        )
+        # Join Book with the subquery containing only the top popular book IDs
+        .join(popular_book_ids_subquery, Book.id == popular_book_ids_subquery.c.id)
+        .outerjoin(Author, Book.author_id == Author.id)
+        # Outer join to get the best active discount price if available
+        .outerjoin(
+            active_discount_subquery, Book.id == active_discount_subquery.c.book_id
+        )
+        # Order the final result based on the review count from the subquery
+        .order_by(popular_book_ids_subquery.c.review_count.desc(), Book.id.asc())
+    )
+
+    # Step 5: Execute and process results
+    raw_results = session.exec(statement).all()
+
+    books_response = []
+    # Unpack results (book object, author name, calculated final price, review count)
+    # review_count is selected but not directly used in the response model here, only for ordering
+    for book, author_name, calculated_final_price, _ in raw_results:
+        book_resp = BookResponse.model_validate(book)
+        book_resp.author_name = author_name
+        # Set discount_price only if there's an active discount lower than original price
+        if (
+            calculated_final_price is not None
+            and calculated_final_price
+            < book.book_price  # This comparison should be fine with Decimals
+        ):
+            book_resp.discount_price = calculated_final_price
+        else:
+            book_resp.discount_price = (
+                None  # Explicitly set to None if no active discount or not lower
+            )
+        books_response.append(book_resp)
+
+    return books_response

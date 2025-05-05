@@ -26,8 +26,8 @@ export function HomePage() {
       setIsLoading(true);
       try {
         const discountedBooks = await bookwormApi.getTopDiscountedBooks();
-        const recommendedBooksData = await bookwormApi.getPopularBooks();
-        const popularBooksData = await bookwormApi.getRecommendedBooks();
+        const recommendedBooksData = await bookwormApi.getRecommendedBooks();
+        const popularBooksData = await bookwormApi.getPopularBooks();
         
         setOnSaleBooks(discountedBooks);
         setRecommendedBooks(recommendedBooksData);
