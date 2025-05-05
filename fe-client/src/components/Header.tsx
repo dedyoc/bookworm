@@ -4,20 +4,35 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import SignInModal from './SignInModal';
 import logo from '@/assets/logo.jpg';
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
+  const [signInApiError, setSignInApiError] = useState<string | null>(null); // State for API login errors
   const { cart } = useCart();
   const { user, isAuthenticated, login, logout } = useAuth();
   const cartItemCount = cart.totalItems;
 
   const handleSignIn = async (email: string, password: string) => {
+    setSignInApiError(null); // Clear previous error on new attempt
     try {
       await login(email, password);
-      setIsSignInModalOpen(false);
+      setIsSignInModalOpen(false); // Close modal on success
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Login failed in Header:', error);
+      // Set the error state to be passed to the modal
+      setSignInApiError(error instanceof Error ? error.message : 'An unknown error occurred during sign in.');
     }
+  };
+
+  const handleOpenSignInModal = () => {
+    setSignInApiError(null); // Clear previous errors before opening
+    setIsSignInModalOpen(true);
+  };
+
+  const handleCloseSignInModal = () => {
+    setIsSignInModalOpen(false);
+    setSignInApiError(null); // Clear error when modal is closed
   };
 
   return (
@@ -82,7 +97,7 @@ const Header = () => {
             ) : (
               <button 
                 className="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition-colors"
-                onClick={() => setIsSignInModalOpen(true)}
+                onClick={handleOpenSignInModal} // Use handler to clear error
               >
                 Sign In
               </button>
@@ -161,7 +176,7 @@ const Header = () => {
                 className="block w-full text-left bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition-colors"
                 onClick={() => {
                   setIsMenuOpen(false);
-                  setIsSignInModalOpen(true);
+                  handleOpenSignInModal(); // Use handler to clear error
                 }}
               >
                 Sign In
@@ -174,8 +189,9 @@ const Header = () => {
       {/* Sign In Modal */}
       <SignInModal 
         isOpen={isSignInModalOpen}
-        onClose={() => setIsSignInModalOpen(false)}
+        onClose={handleCloseSignInModal} // Use handler to clear error
         onSignIn={handleSignIn}
+        signInError={signInApiError} // Pass the error state
       />
     </header>
   );

@@ -1,27 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Separator } from '@/components/ui/separator';
 
 interface SignInModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSignIn: (email: string, password: string) => void;
+  onSignIn: (email: string, password: string) => Promise<void>;
+  signInError: string | null;
 }
 
-const SignInModal = ({ isOpen, onClose, onSignIn }: SignInModalProps) => {
+const SignInModal = ({ isOpen, onClose, onSignIn, signInError }: SignInModalProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isOpen) {
+      setEmail('');
+      setPassword('');
+      setLocalError('');
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
+
+  const handleInputChange = (setter: React.Dispatch<React.SetStateAction<string>>) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setter(e.target.value);
+    setLocalError('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // TODO: Add more validation if needed
+    setLocalError('');
+    setIsSubmitting(true);
+
     if (!email.trim() || !password.trim()) {
-      setError('Please enter both email and password');
+      setLocalError('Please enter both email and password');
+      setIsSubmitting(false);
       return;
     }
-        setError('');
-        onSignIn(email, password);
+
+    try {
+      await onSignIn(email, password);
+    } catch (error) {
+      console.error("Sign in failed in modal:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -35,15 +59,14 @@ const SignInModal = ({ isOpen, onClose, onSignIn }: SignInModalProps) => {
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
           >
-      <Separator className="mb-6" />
-
+            <Separator className="mb-6" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4">
-          {error && (
+          {(localError || signInError) && (
             <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
-              {error}
+              {localError || signInError}
             </div>
           )}
 
@@ -55,10 +78,11 @@ const SignInModal = ({ isOpen, onClose, onSignIn }: SignInModalProps) => {
               type="email"
               id="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={handleInputChange(setEmail)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
               placeholder='example@gmail.com'
+              disabled={isSubmitting}
             />
           </div>
 
@@ -70,9 +94,10 @@ const SignInModal = ({ isOpen, onClose, onSignIn }: SignInModalProps) => {
               type="password"
               id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handleInputChange(setPassword)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              disabled={isSubmitting}
             />
           </div>
 
@@ -86,9 +111,10 @@ const SignInModal = ({ isOpen, onClose, onSignIn }: SignInModalProps) => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800"
+              className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 disabled:opacity-50"
+              disabled={isSubmitting}
             >
-              Sign In
+              {isSubmitting ? 'Signing In...' : 'Sign In'}
             </button>
           </div>
         </form>

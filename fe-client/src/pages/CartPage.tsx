@@ -32,6 +32,7 @@ export const CartPage: React.FC = () => {
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [updateDialogMessages, setUpdateDialogMessages] = useState<string[]>([]);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
+  const [signInApiError, setSignInApiError] = useState<string | null>(null);
 
   const handleQuantityChange = (id: string | number, newQuantity: number) => {
     if (newQuantity < 1) {
@@ -47,6 +48,7 @@ export const CartPage: React.FC = () => {
 
   const handlePlaceOrder = async () => {
     if (!isAuthenticated || !token) {
+      setSignInApiError(null);
       setIsSignInModalOpen(true);
       return;
     }
@@ -167,12 +169,19 @@ export const CartPage: React.FC = () => {
   };
 
   const handleSignIn = async (email: string, password: string) => {
+    setSignInApiError(null);
     try {
       await login(email, password);
       setIsSignInModalOpen(false);
     } catch (error) {
       console.error('Login failed:', error);
+      setSignInApiError(error instanceof Error ? error.message : 'An unknown error occurred during sign in.');
     }
+  };
+
+  const handleCloseSignInModal = () => {
+    setIsSignInModalOpen(false);
+    setSignInApiError(null);
   };
 
   useEffect(() => {
@@ -346,8 +355,9 @@ export const CartPage: React.FC = () => {
 
       <SignInModal
         isOpen={isSignInModalOpen}
-        onClose={() => setIsSignInModalOpen(false)}
+        onClose={handleCloseSignInModal}
         onSignIn={handleSignIn}
+        signInError={signInApiError}
       />
     </div>
   );
