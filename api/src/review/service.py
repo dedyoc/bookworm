@@ -44,7 +44,7 @@ def create_review(
     #     raise DuplicateReviewError()
 
     # Create new review with the authenticated user's ID
-    review = Review.model_validate(review_create, update={"user_id": user_id})
+    review = Review.model_validate(review_create)
     session.add(review)
     session.commit()
     session.refresh(review)

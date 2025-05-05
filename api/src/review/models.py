@@ -43,7 +43,7 @@ class ReviewBase(SQLModel):
     """
 
     book_id: int = Field(sa_type=BigInteger, foreign_key="book.id")
-    user_id: int = Field(sa_type=BigInteger, foreign_key="user.id")
+    user_id: int = Field(sa_type=BigInteger)
     rating: int = Field(ge=1, le=5)
     review_title: str = Field(max_length=120)
     review_details: Optional[str] = None
@@ -62,7 +62,6 @@ class Review(ReviewBase, TimestampModel, table=True):
     id: Optional[int] = Field(sa_type=BigInteger, default=None, primary_key=True)
 
     book: Book = Relationship()
-    user: User = Relationship()
 
 
 class ReviewCreate(ReviewBase):
