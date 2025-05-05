@@ -56,8 +56,65 @@ export const ProductPage = () => {
   const [ratingStats, setRatingStats] = useState<BookRatingStatsResponse | null>(null);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
 
+  const fetchRatingStats = async () => {
+    if (!numericId) return;
+    setIsStatsLoading(true);
+    try {
+      const stats = await bookwormApi.getBookRatingStats(numericId);
+      setRatingStats(stats);
+    } catch (error) {
+      console.error("Failed to fetch rating stats:", error);
+    } finally {
+      setIsStatsLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    if (!numericId) return;
+    setIsReviewLoading(true);
+    try {
+      // Map frontend sort state to backend API parameters
+      let sortParams: { 
+        sort_by_rating_asc?: boolean | null; 
+        sort_by_date?: ReviewDateSort | null 
+      } = {};
+
+      switch (reviewSort) {
+        case 'newest':
+          sortParams.sort_by_date = 'newest';
+          break;
+        case 'oldest':
+          sortParams.sort_by_date = 'oldest';
+          break;
+        case 'rating-high':
+          sortParams.sort_by_rating_asc = false; // Descending
+          break;
+        case 'rating-low':
+          sortParams.sort_by_rating_asc = true; // Ascending
+          break;
+        default:
+          sortParams.sort_by_date = 'newest'; // Default sort
+      }
+
+      const result = await bookwormApi.getReviews({ 
+        book_id: numericId,
+        page: reviewPage, 
+        page_size: reviewLimit,
+        rating_star: starFilter,
+        ...sortParams
+      });
+      setReviews(result.items);
+      setTotalReviews(result.total);
+      setTotalReviewPages(result.pages);
+    } catch (error) {
+      console.error("Failed to fetch reviews:", error);
+    } finally {
+      setIsReviewLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchBook = async () => {
+    const fetchBookData = async () => {
       if (!numericId) return;
       setIsBookLoading(true);
       setBookError(null);
@@ -71,71 +128,16 @@ export const ProductPage = () => {
         setIsBookLoading(false);
       }
     };
-    fetchBook();
+    fetchBookData();
   }, [numericId]);
 
   useEffect(() => {
-    const fetchRatingStats = async () => {
-      if (!numericId) return;
-      setIsStatsLoading(true);
-      try {
-        const stats = await bookwormApi.getBookRatingStats(numericId);
-        setRatingStats(stats);
-      } catch (error) {
-        console.error("Failed to fetch rating stats:", error);
-      } finally {
-        setIsStatsLoading(false);
-      }
-    };
     fetchRatingStats();
-  }, [numericId]);
+  }, [numericId]); // depend on id for initial load
 
   useEffect(() => {
-    const fetchReviews = async () => {
-      if (!numericId) return;
-      setIsReviewLoading(true);
-      try {
-        // Map frontend sort state to backend API parameters
-        let sortParams: { 
-          sort_by_rating_asc?: boolean | null; 
-          sort_by_date?: ReviewDateSort | null 
-        } = {};
-
-        switch (reviewSort) {
-          case 'newest':
-            sortParams.sort_by_date = 'newest';
-            break;
-          case 'oldest':
-            sortParams.sort_by_date = 'oldest';
-            break;
-          case 'rating-high':
-            sortParams.sort_by_rating_asc = false; // Descending
-            break;
-          case 'rating-low':
-            sortParams.sort_by_rating_asc = true; // Ascending
-            break;
-          default:
-            sortParams.sort_by_date = 'newest'; // Default sort
-        }
-
-        const result = await bookwormApi.getReviews({ 
-          book_id: numericId,
-          page: reviewPage, 
-          page_size: reviewLimit,
-          rating_star: starFilter,
-          ...sortParams // Spread the determined sort parameters
-        });
-        setReviews(result.items);
-        setTotalReviews(result.total);
-        setTotalReviewPages(result.pages);
-      } catch (error) {
-        console.error("Failed to fetch reviews:", error);
-      } finally {
-        setIsReviewLoading(false);
-      }
-    };
     fetchReviews();
-  }, [numericId, reviewPage, reviewLimit, reviewSort, starFilter]);
+  }, [numericId, reviewPage, reviewLimit, reviewSort, starFilter]); // dependencies for review fetching
 
   const handleQuantityChange = (newQuantity: number) => {
     setQuantity(newQuantity);
@@ -193,6 +195,7 @@ export const ProductPage = () => {
       return;
     }
 
+
     setIsSubmittingReview(true); 
     setSubmitReviewError(null); 
     setSubmitReviewSuccess(null); 
@@ -207,13 +210,15 @@ export const ProductPage = () => {
     console.log("Submitting review data:", JSON.stringify(reviewData, null, 2)); 
 
     try {
-      await bookwormApi.createReview(reviewData, token); 
+      await bookwormApi.createReview(reviewData); 
       setSubmitReviewSuccess("Review submitted successfully!");
       setReviewTitle('');
       setReviewDetails('');
       setReviewRating(undefined);
       setReviewPage(1); 
       setStarFilter(null); 
+      fetchReviews(); 
+      fetchRatingStats();
     } catch (error: any) {
       console.error("Failed to submit review:", error);
       let errorDetailString = "Failed to submit review. Please try again."; 
@@ -299,8 +304,8 @@ export const ProductPage = () => {
                   src={book.book_cover_photo}
                   alt={book.book_title}
                   onError={(e) => {
-                    e.currentTarget.onerror = null; // prevents looping
-                    e.currentTarget.src = defaultImage; // fallback image
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = defaultImage;
                   }
                   }
                   className="object-cover w-full h-full"

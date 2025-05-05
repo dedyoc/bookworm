@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import SignInModal from './SignInModal';
-
+import logo from '@/assets/logo.jpg';
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
@@ -26,7 +26,7 @@ const Header = () => {
         <div className="flex justify-between items-center">
           
           <Link to="/" className="flex text-2xl font-bold text-blue-700">
-          <img src="https://picsum.photos/64" alt="Logo" className="h-8" />
+          <img src={logo} alt="Logo" className="h-8" />
           <span className="ml-2">BOOKWORM</span>
           </Link>
 
@@ -119,6 +119,7 @@ const Header = () => {
               to="/"
               className="block text-gray-700 hover:text-blue-700 transition-colors py-2"
               onClick={() => setIsMenuOpen(false)}
+              activeProps={{ className: "text-blue-700 font-semibold underline" }}
             >
               Home
             </Link>
@@ -127,6 +128,7 @@ const Header = () => {
               search={{ sort: 'on_sale', page: 1 , limit: 15 }}
               className="block text-gray-700 hover:text-blue-700 transition-colors py-2"
               onClick={() => setIsMenuOpen(false)}
+              activeProps={{ className: "text-blue-700 font-semibold underline" }}
             >
               Shop
             </Link>
@@ -134,6 +136,7 @@ const Header = () => {
               to="/about"
               className="block text-gray-700 hover:text-blue-700 transition-colors py-2"
               onClick={() => setIsMenuOpen(false)}
+              activeProps={{ className: "text-blue-700 font-semibold underline" }}
             >
               About
             </Link>
@@ -141,6 +144,7 @@ const Header = () => {
               to="/cart"
               className="block text-gray-700 hover:text-blue-700 transition-colors py-2"
               onClick={() => setIsMenuOpen(false)}
+              activeProps={{ className: "text-blue-700 font-semibold underline" }}
             >
               Cart ({cartItemCount})
             </Link>

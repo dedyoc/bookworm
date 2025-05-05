@@ -180,13 +180,10 @@ export const bookwormApi = {
   /**
    * Creates a new review. Requires authentication token.
    */
-  createReview: async (reviewData: ReviewCreate, token: string): Promise<ReviewResponse> => {
+  createReview: async (reviewData: ReviewCreate): Promise<ReviewResponse> => {
     try {
       const data = await ky.post(`${API_BASE_URL}/reviews/`, {
         json: reviewData,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       }).json<ReviewResponse>();
       return data;
     } catch (error) {
