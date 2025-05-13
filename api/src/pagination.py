@@ -1,4 +1,4 @@
-from typing import Generic, List, TypeVar
+from typing import Generic, TypeVar
 
 from fastapi import Query
 from pydantic import BaseModel
@@ -16,7 +16,9 @@ class PaginationParams:
         page_size: The number of items per page.
         offset: The calculated offset for database queries.
     """
-
+    page: int
+    page_size: int
+    offset: int
     def __init__(
         self,
         page: int = Query(1, ge=1, description="Page number"),
@@ -44,7 +46,7 @@ class PageResponse(BaseModel, Generic[T]):
         pages: The total number of pages.
     """
 
-    items: List[T]
+    items: list[T]
     total: int
     page: int
     page_size: int
@@ -52,7 +54,7 @@ class PageResponse(BaseModel, Generic[T]):
 
     @classmethod
     def create(
-        cls, items: List[T], total: int, params: PaginationParams
+        cls, items: list[T], total: int, params: PaginationParams
     ) -> "PageResponse[T]":
         """Creates a PageResponse instance.
 

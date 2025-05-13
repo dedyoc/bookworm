@@ -15,6 +15,7 @@ dependencies = [
     "pydantic-settings>=2.2.1",
     "pydantic[email]>=2.11.3",
     "bcrypt>=4.3.0",
+    "pytest>=8.3.5",
 ]
 
 [dependency-groups]
@@ -24,3 +25,8 @@ dev = [
     "isort>=6.0.1",
     "pytest>=8.3.5",
 ]
+
+[tool.pytest.ini_options]
+testpaths = tests # Tell pytest where to find tests
+python_files = test_*.py *_test.py
+addopts = -ra -q --cov=backend --cov-report=term-missing # Example options: report reasons for skip/xfail, quiet, add coverage for 'backend' code
