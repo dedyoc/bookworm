@@ -44,7 +44,7 @@ def get_category(session: Session, category_id: int) -> Category:
     return category
 
 
-def get_all_categories(session: Session) -> List[Category]:
+def get_all_categories(session: Session) -> list[Category]:
     """Gets all categories.
 
     Args:

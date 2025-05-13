@@ -75,9 +75,9 @@ def get_book(session: Session, book_id: int) -> BookResponse:
 def get_books(
     session: Session,
     pagination: PaginationParams,
-    category_id: Optional[int] = None,
-    author_id: Optional[int] = None,
-    rating: Optional[int] = None,
+    category_id: int | None,
+    author_id: int | None,
+    rating: int | None,
     sort_mode: Optional[SortMode] = None,
 ) -> PageResponse[BookResponse]:
     """Gets a paginated list of books with optional filtering and sorting.
